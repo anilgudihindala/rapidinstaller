@@ -307,6 +307,9 @@ class AppLaunchManagerWindow(Gtk.Window):
     def _setup_headerbar(self) -> None:
         """Constructs modern GTK HeaderBar."""
         header = Gtk.HeaderBar()
+    def _setup_headerbar(self) -> None:
+        """Constructs modern GTK HeaderBar."""
+        header = Gtk.HeaderBar()
         header.set_show_close_button(True)
 
         # Title & Subtitle box
@@ -333,11 +336,6 @@ class AppLaunchManagerWindow(Gtk.Window):
             except Exception:
                 pass
 
-        # Check Default Installer Status Widget Box
-        self.default_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self._update_default_installer_widget()
-        header.pack_start(self.default_box)
-
         # Install Package Button
         btn_install = Gtk.Button(label="+ Install Package...")
         btn_install.get_style_context().add_class("btn-primary")
@@ -361,42 +359,6 @@ class AppLaunchManagerWindow(Gtk.Window):
         header.pack_end(btn_refresh)
 
         self.set_titlebar(header)
-
-    def _update_default_installer_widget(self) -> None:
-        """Updates default installer status badge or button on HeaderBar."""
-        for c in self.default_box.get_children():
-            self.default_box.remove(c)
-
-        if is_default_installer():
-            badge = Gtk.Label(label="Default System Installer")
-            badge.get_style_context().add_class("badge-default-active")
-            self.default_box.pack_start(badge, False, False, 8)
-        else:
-            btn_def = Gtk.Button(label="Set as Default")
-            btn_def.get_style_context().add_class("btn-default-installer")
-            btn_def.set_tooltip_text("Set Rapid Installer as your default handler for .tar.gz, .zip, .deb, .rpm, .AppImage archives")
-            btn_def.connect("clicked", self._on_set_default_clicked)
-            self.default_box.pack_start(btn_def, False, False, 8)
-
-        self.default_box.show_all()
-
-    def _on_set_default_clicked(self, widget: Gtk.Widget) -> None:
-        """Registers Rapid Installer as system default installer."""
-        success = set_as_default_installer()
-        if success:
-            self._update_default_installer_widget()
-            toast = Gtk.MessageDialog(
-                transient_for=self,
-                flags=0,
-                message_type=Gtk.MessageType.INFO,
-                buttons=Gtk.ButtonsType.OK,
-                text="Default Installer Configured!",
-            )
-            toast.format_secondary_text(
-                "Rapid Installer is now registered as your default application installer for all Linux package archives (.tar.gz, .zip, .deb, .rpm, .7z, .AppImage)."
-            )
-            toast.run()
-            toast.destroy()
 
     def _build_main_ui(self) -> None:
         """Assembles overview metrics banner and application cards container."""
@@ -439,7 +401,7 @@ class AppLaunchManagerWindow(Gtk.Window):
         lbl_s3_title.get_style_context().add_class("stat-label")
         lbl_s3_title.set_xalign(0)
 
-        lbl_s3_val = Gtk.Label(label=self.env["opt_dir"])
+        lbl_s3_val = Gtk.Label(label="~/.local/opt")
         lbl_s3_val.get_style_context().add_class("stat-value")
         lbl_s3_val.set_xalign(0)
 
@@ -466,6 +428,18 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         self.apps_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         scrolled.add(self.apps_vbox)
+
+        # --- Drag & Drop Footer Bar ---
+        drop_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        drop_bar.get_style_context().add_class("drop-banner")
+
+        img_drop = Gtk.Image.new_from_icon_name("emblem-downloads-symbolic", Gtk.IconSize.MENU)
+        lbl_drop = Gtk.Label(label="Drag & drop package archives (.tar.gz, .deb, .zip, .AppImage) anywhere into window to install")
+        lbl_drop.get_style_context().add_class("drop-banner-text")
+
+        drop_bar.pack_start(img_drop, False, False, 8)
+        drop_bar.pack_start(lbl_drop, False, False, 0)
+        main_vbox.pack_end(drop_bar, False, False, 0)
 
         self.refresh_apps_list()
 
@@ -922,7 +896,7 @@ class AppLaunchManagerWindow(Gtk.Window):
         chk_default.set_active(is_default_installer())
         box.pack_start(chk_default, False, False, 0)
 
-        box.show_all()
+        dialog.show_all()
         dialog.run()
 
         config["auto_trash_installer"] = chk_auto.get_active()
@@ -930,7 +904,6 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         if chk_default.get_active() and not is_default_installer():
             set_as_default_installer()
-            self._update_default_installer_widget()
 
         dialog.destroy()
 
