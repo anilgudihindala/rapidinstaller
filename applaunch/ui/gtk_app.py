@@ -236,19 +236,28 @@ def load_css_theme() -> None:
         logger.warning(f"Could not load custom GTK CSS theme: {err}")
 
 
-def uninstall_app_backend(app_id: str) -> bool:
-    """Backend routine to uninstall application and clean desktop files."""
+def uninstall_app_backend(app_id: str, purge_residuals: bool = True) -> bool:
+    """Backend routine to uninstall application, clean desktop files, CLI symlinks, and residual caches."""
+    from applaunch.utils.sys_info import get_environment_info, refresh_desktop_database, get_app_residual_paths, is_protected_system_app
+
+    if is_protected_system_app(app_id):
+        return False
+
     env = get_environment_info()
     opt_path = os.path.join(env["opt_dir"], app_id)
     desktop_path = os.path.join(env["apps_dir"], f"{app_id}.desktop")
     user_desktop_path = os.path.expanduser(f"~/Desktop/{app_id}.desktop")
+    cli_symlink = os.path.join(env["bin_dir"], app_id)
 
+    found = False
     if os.path.isdir(opt_path):
         shutil.rmtree(opt_path, ignore_errors=True)
+        found = True
 
     if os.path.isfile(desktop_path):
         try:
             os.remove(desktop_path)
+            found = True
         except Exception:
             pass
 
@@ -258,7 +267,13 @@ def uninstall_app_backend(app_id: str) -> bool:
         except Exception:
             pass
 
-    # Remove icon
+    if os.path.islink(cli_symlink) or os.path.isfile(cli_symlink):
+        try:
+            os.remove(cli_symlink)
+        except Exception:
+            pass
+
+    # Remove icon resources
     icons_dir = env["icons_dir"]
     if os.path.isdir(icons_dir):
         for f in os.listdir(icons_dir):
@@ -268,7 +283,20 @@ def uninstall_app_backend(app_id: str) -> bool:
                 except Exception:
                     pass
 
+    # Deep clean residuals if requested
+    if purge_residuals:
+        residuals = get_app_residual_paths(app_id)
+        for r in residuals:
+            try:
+                if os.path.isdir(r):
+                    shutil.rmtree(r, ignore_errors=True)
+                elif os.path.isfile(r):
+                    os.remove(r)
+            except Exception:
+                pass
+
     refresh_desktop_database()
+    return True
     return True
 
 
@@ -1154,10 +1182,8 @@ class AppLaunchManagerWindow(Gtk.Window):
                 logger.info(f"Launched scanned candidate binary: {cmd_run}")
                 return
 
-        logger.warning(f"Could not find valid executable launcher for app: {app}")
-
     def _on_uninstall_app(self, app: dict) -> None:
-        """Presents AppCleaner-style Deep Uninstaller GTK dialog."""
+        """Presents AppCleaner-style Deep Uninstaller GTK dialog with progress bar feedback."""
         from applaunch.utils.sys_info import get_app_residual_paths
         residuals = get_app_residual_paths(app["app_id"])
 
@@ -1189,22 +1215,56 @@ class AppLaunchManagerWindow(Gtk.Window):
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
-            success = uninstall_app_backend(app["app_id"], purge_residuals=purge)
-            if success:
-                self.refresh_apps_list()
-                toast = Gtk.MessageDialog(
-                    transient_for=self,
-                    flags=0,
-                    message_type=Gtk.MessageType.INFO,
-                    buttons=Gtk.ButtonsType.OK,
-                    text="Application Uninstalled",
-                )
-                toast.format_secondary_text(
-                    f"Successfully uninstalled '{app['display_name']}'." +
-                    ("\nResidual config and cache files were deep cleaned." if purge else "")
-                )
-                toast.run()
-                toast.destroy()
+            progress_dialog = Gtk.Dialog(
+                title=f"Removing {app['display_name']}",
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+            )
+            progress_dialog.set_default_size(440, 140)
+            pbox = progress_dialog.get_content_area()
+            pbox.set_spacing(12)
+            pbox.set_border_width(16)
+
+            lbl_p = Gtk.Label(label=f"Removing {app['display_name']} and cleaning residual files...")
+            lbl_p.set_xalign(0)
+            pbar = Gtk.ProgressBar()
+            pbar.set_pulse_step(0.1)
+            pbox.pack_start(lbl_p, False, False, 0)
+            pbox.pack_start(pbar, False, False, 0)
+            progress_dialog.show_all()
+
+            def pulse_cb():
+                pbar.pulse()
+                return True
+
+            timer_id = GLib.timeout_add(100, pulse_cb)
+
+            def worker():
+                success = uninstall_app_backend(app["app_id"], purge_residuals=purge)
+                GLib.source_remove(timer_id)
+                GLib.idle_add(progress_dialog.destroy)
+                if success:
+                    GLib.idle_add(self.refresh_apps_list)
+                    GLib.idle_add(self._show_uninstalled_toast, app["display_name"], purge)
+                else:
+                    GLib.idle_add(self._show_error_dialog, f"Could not complete uninstallation of '{app['display_name']}'.")
+
+            threading.Thread(target=worker, daemon=True).start()
+
+    def _show_uninstalled_toast(self, app_name: str, purged: bool) -> None:
+        toast = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Application Uninstalled",
+        )
+        msg = f"Successfully uninstalled '{app_name}'."
+        if purged:
+            msg += "\nResidual config and cache files were deep cleaned."
+        toast.format_secondary_text(msg)
+        toast.run()
+        toast.destroy()
 
     def _on_install_clicked(self, widget: Gtk.Widget) -> None:
         """Opens GTK FileChooserDialog with multi-select support to select application archives."""
