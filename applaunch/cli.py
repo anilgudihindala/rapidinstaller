@@ -143,7 +143,67 @@ def main(args_list: Optional[List[str]] = None) -> int:
         help="Move installer archive to system Trash after successful installation",
     )
 
+    parser.add_argument(
+        "--toolchain",
+        nargs="*",
+        metavar=("ACTION", "TOOL_ID"),
+        help="Manage developer toolchains (e.g. --toolchain list, --toolchain install nvm, --toolchain uninstall bun)",
+    )
+    parser.add_argument(
+        "--setup-curl-hook",
+        action="store_true",
+        help="Installs terminal curl interceptor hook in ~/.bashrc / ~/.zshrc",
+    )
+
     parsed = parser.parse_args(args_list)
+
+    if parsed.setup_curl_hook:
+        from applaunch.utils.shell_env import inject_shell_profile_block
+        hook_code = (
+            '# Rapid Installer Smart Curl Interceptor\n'
+            'rapid_curl_install() {\n'
+            '    if [[ "$*" == *"raw.githubusercontent.com"* || "$*" == *"install.sh"* || "$*" == *"bun.sh/install"* ]]; then\n'
+            '        echo "[Rapid Installer] Intercepted runtime setup script."\n'
+            '    fi\n'
+            '    command curl "$@"\n'
+            '}'
+        )
+        inject_shell_profile_block("curl-hook", hook_code)
+        print("[Rapid Installer] Successfully installed terminal curl interceptor hook in your shell profiles.")
+        return 0
+
+    if parsed.toolchain:
+        from applaunch.core.toolchains import ToolchainManager
+        action = parsed.toolchain[0].lower() if parsed.toolchain else "list"
+        if action == "list":
+            tools = ToolchainManager.list_all_toolchains()
+            print("\n=======================================================")
+            print(" Rapid Installer - Developer Runtimes & Toolchains")
+            print("=======================================================")
+            for t in tools:
+                status = f"✓ Installed ({t['version']})" if t["installed"] else "Not Installed"
+                print(f"• {t['display_name']} [{t['id']}]")
+                print(f"    Category: {t['category']}")
+                print(f"    Status:   {status}\n")
+            print("=======================================================\n")
+            return 0
+        elif action == "install" and len(parsed.toolchain) > 1:
+            tool_id = parsed.toolchain[1].lower()
+            res = ToolchainManager.install_toolchain(tool_id)
+            if res.get("status") == "SUCCESS":
+                print(f"[Rapid Installer] Successfully installed developer toolchain '{tool_id}' ({res.get('version')}).")
+                return 0
+            else:
+                print(f"[Rapid Installer] Error installing '{tool_id}': {res.get('msg')}")
+                return 1
+        elif action == "uninstall" and len(parsed.toolchain) > 1:
+            tool_id = parsed.toolchain[1].lower()
+            if ToolchainManager.uninstall_toolchain(tool_id):
+                print(f"[Rapid Installer] Successfully uninstalled developer toolchain '{tool_id}'.")
+                return 0
+            else:
+                print(f"[Rapid Installer] Could not uninstall '{tool_id}'.")
+                return 1
 
     if parsed.list:
         list_installed_apps()

@@ -418,20 +418,42 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         main_vbox.pack_start(overview_card, False, False, 0)
 
-        # --- Search Bar ---
+        # --- Notebook Tabs for Applications vs. Developer Toolchains ---
+        self.notebook = Gtk.Notebook()
+        self.notebook.set_show_border(False)
+        main_vbox.pack_start(self.notebook, True, True, 0)
+
+        # Tab 1: Desktop Applications
+        tab_apps_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+
         self.search_entry = Gtk.SearchEntry()
         self.search_entry.set_placeholder_text("Search installed applications...")
         self.search_entry.get_style_context().add_class("search-entry")
         self.search_entry.connect("search-changed", lambda w: self.refresh_apps_list())
-        main_vbox.pack_start(self.search_entry, False, False, 0)
+        tab_apps_box.pack_start(self.search_entry, False, False, 0)
 
-        # --- Scrollable Application List ---
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        main_vbox.pack_start(scrolled, True, True, 0)
+        scrolled_apps = Gtk.ScrolledWindow()
+        scrolled_apps.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        tab_apps_box.pack_start(scrolled_apps, True, True, 0)
 
         self.apps_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        scrolled.add(self.apps_vbox)
+        scrolled_apps.add(self.apps_vbox)
+
+        lbl_tab1 = Gtk.Label(label="Desktop Applications")
+        self.notebook.append_page(tab_apps_box, lbl_tab1)
+
+        # Tab 2: Developer Toolchains & Runtimes
+        tab_tools_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+
+        scrolled_tools = Gtk.ScrolledWindow()
+        scrolled_tools.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        tab_tools_box.pack_start(scrolled_tools, True, True, 0)
+
+        self.toolchains_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        scrolled_tools.add(self.toolchains_vbox)
+
+        lbl_tab2 = Gtk.Label(label="Developer Runtimes (nvm, bun, rustup...)")
+        self.notebook.append_page(tab_tools_box, lbl_tab2)
 
         # --- Drag & Drop Footer Bar ---
         drop_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -467,6 +489,147 @@ class AppLaunchManagerWindow(Gtk.Window):
         self.batch_action_bar.set_visible(False)
 
         self.refresh_apps_list()
+        self.refresh_toolchains_list()
+
+    def refresh_toolchains_list(self) -> None:
+        """Queries developer toolchains and populates GTK card list."""
+        from applaunch.core.toolchains import ToolchainManager
+        for c in self.toolchains_vbox.get_children():
+            self.toolchains_vbox.remove(c)
+
+        toolchains = ToolchainManager.list_all_toolchains()
+        for tool in toolchains:
+            row = self._create_toolchain_card_row(tool)
+            self.toolchains_vbox.pack_start(row, False, False, 0)
+
+        self.toolchains_vbox.show_all()
+
+    def _create_toolchain_card_row(self, tool: dict) -> Gtk.Widget:
+        """Constructs card row for single developer toolchain."""
+        card_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        card_box.get_style_context().add_class("app-card")
+
+        img_icon = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic", Gtk.IconSize.DND)
+        img_icon.set_pixel_size(44)
+        card_box.pack_start(img_icon, False, False, 0)
+
+        meta_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        meta_vbox.set_valign(Gtk.Align.CENTER)
+
+        lbl_name = Gtk.Label(label=tool["display_name"])
+        lbl_name.get_style_context().add_class("app-title")
+        lbl_name.set_xalign(0)
+
+        lbl_desc = Gtk.Label(label=f"{tool['category']} — {tool['description']}")
+        lbl_desc.get_style_context().add_class("app-subtitle")
+        lbl_desc.set_xalign(0)
+
+        meta_vbox.pack_start(lbl_name, False, False, 0)
+        meta_vbox.pack_start(lbl_desc, False, False, 0)
+        card_box.pack_start(meta_vbox, True, True, 0)
+
+        # Status badge
+        badge = Gtk.Label(label=f"✓ {tool['version']}" if tool["installed"] else "Not Installed")
+        badge.get_style_context().add_class("badge-size" if tool["installed"] else "badge-default-active")
+        badge.set_valign(Gtk.Align.CENTER)
+        card_box.pack_start(badge, False, False, 8)
+
+        # Actions
+        actions_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        actions_box.set_valign(Gtk.Align.CENTER)
+
+        if tool["installed"]:
+            btn_remove = Gtk.Button()
+            box_rm = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            img_rm = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
+            lbl_rm = Gtk.Label(label="Remove")
+            box_rm.pack_start(img_rm, False, False, 0)
+            box_rm.pack_start(lbl_rm, False, False, 0)
+            btn_remove.add(box_rm)
+            btn_remove.get_style_context().add_class("btn-uninstall")
+            btn_remove.connect("clicked", lambda w, t=tool: self._on_remove_toolchain(t))
+            actions_box.pack_start(btn_remove, False, False, 0)
+        else:
+            btn_inst = Gtk.Button()
+            box_in = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            img_in = Gtk.Image.new_from_icon_name("system-software-install-symbolic", Gtk.IconSize.BUTTON)
+            lbl_in = Gtk.Label(label="Install")
+            box_in.pack_start(img_in, False, False, 0)
+            box_in.pack_start(lbl_in, False, False, 0)
+            btn_inst.add(box_in)
+            btn_inst.get_style_context().add_class("btn-primary")
+            btn_inst.connect("clicked", lambda w, t=tool: self._on_install_toolchain(t))
+            actions_box.pack_start(btn_inst, False, False, 0)
+
+        card_box.pack_start(actions_box, False, False, 0)
+        return card_box
+
+    def _on_install_toolchain(self, tool: dict) -> None:
+        """Triggers background installation for toolchain."""
+        progress_dialog = Gtk.Dialog(
+            title=f"Installing {tool['display_name']}",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        progress_dialog.set_default_size(450, 150)
+        vbox = progress_dialog.get_content_area()
+        vbox.set_spacing(12)
+        vbox.set_border_width(16)
+
+        lbl = Gtk.Label(label=f"Installing {tool['display_name']} environment...")
+        lbl.set_xalign(0)
+        pbar = Gtk.ProgressBar()
+        pbar.set_fraction(0.1)
+        pbar.set_show_text(True)
+        pbar.set_text("Executing official installer pipeline...")
+        vbox.pack_start(lbl, False, False, 0)
+        vbox.pack_start(pbar, False, False, 0)
+        progress_dialog.show_all()
+
+        def worker():
+            from applaunch.core.toolchains import ToolchainManager
+            res = ToolchainManager.install_toolchain(tool["id"])
+            GLib.idle_add(progress_dialog.destroy)
+            if res.get("status") == "SUCCESS":
+                GLib.idle_add(self.refresh_toolchains_list)
+                GLib.idle_add(self._show_toolchain_toast, f"Successfully installed {tool['display_name']} ({res.get('version')}).")
+            else:
+                GLib.idle_add(self._show_error_dialog, res.get("msg", "Error installing toolchain"))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_remove_toolchain(self, tool: dict) -> None:
+        """Uninstalls toolchain and strips shell environment profile blocks."""
+        from applaunch.core.toolchains import ToolchainManager
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text=f"Remove {tool['display_name']}?",
+        )
+        dialog.format_secondary_text(
+            f"This will remove {tool['display_name']} files and clean environment entries from ~/.bashrc and ~/.zshrc."
+        )
+        if dialog.run() == Gtk.ResponseType.OK:
+            dialog.destroy()
+            ToolchainManager.uninstall_toolchain(tool["id"])
+            self.refresh_toolchains_list()
+            self._show_toolchain_toast(f"Removed {tool['display_name']} and cleaned shell profiles.")
+        else:
+            dialog.destroy()
+
+    def _show_toolchain_toast(self, msg: str) -> None:
+        toast = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Toolchain Updated",
+        )
+        toast.format_secondary_text(msg)
+        toast.run()
+        toast.destroy()
 
     def _clear_selection(self) -> None:
         """Clears selected app checkboxes and hides action bar."""
