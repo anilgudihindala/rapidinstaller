@@ -280,6 +280,9 @@ class AppLaunchManagerWindow(Gtk.Window):
         self.set_default_size(880, 640)
         self.set_position(Gtk.WindowPosition.CENTER)
 
+        self.selection_mode = False
+        self.selected_app_ids = set()
+
         # Enable Drag and Drop for package archive files
         self.drag_dest_set(
             Gtk.DestDefaults.ALL,
@@ -309,9 +312,6 @@ class AppLaunchManagerWindow(Gtk.Window):
                     break
         context.finish(True, False, time)
 
-    def _setup_headerbar(self) -> None:
-        """Constructs modern GTK HeaderBar."""
-        header = Gtk.HeaderBar()
     def _setup_headerbar(self) -> None:
         """Constructs modern GTK HeaderBar."""
         header = Gtk.HeaderBar()
@@ -346,6 +346,12 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_install.get_style_context().add_class("btn-primary")
         btn_install.connect("clicked", self._on_install_clicked)
         header.pack_end(btn_install)
+
+        # Batch Selection Button
+        self.btn_batch = Gtk.Button(label="Select")
+        self.btn_batch.set_tooltip_text("Select multiple applications to uninstall in batch")
+        self.btn_batch.connect("clicked", lambda w: self._toggle_selection_mode())
+        header.pack_end(self.btn_batch)
 
         # Settings Preferences Button
         btn_settings = Gtk.Button()
@@ -446,7 +452,107 @@ class AppLaunchManagerWindow(Gtk.Window):
         drop_bar.pack_start(lbl_drop, False, False, 0)
         main_vbox.pack_end(drop_bar, False, False, 0)
 
+        # --- Batch Selection Action Bar ---
+        self.batch_action_bar = Gtk.ActionBar()
+        self.batch_action_bar.get_style_context().add_class("batch-action-bar")
+
+        self.lbl_batch_count = Gtk.Label(label="0 Selected Applications")
+        self.lbl_batch_count.get_style_context().add_class("batch-count-label")
+
+        btn_batch_uninstall = Gtk.Button(label="Remove Selected Apps")
+        btn_batch_uninstall.get_style_context().add_class("btn-uninstall")
+        btn_batch_uninstall.connect("clicked", lambda w: self._on_batch_uninstall_clicked())
+
+        btn_batch_cancel = Gtk.Button(label="Cancel Selection")
+        btn_batch_cancel.connect("clicked", lambda w: self._toggle_selection_mode(False))
+
+        self.batch_action_bar.pack_start(self.lbl_batch_count)
+        self.batch_action_bar.pack_end(btn_batch_uninstall)
+        self.batch_action_bar.pack_end(btn_batch_cancel)
+
+        main_vbox.pack_end(self.batch_action_bar, False, False, 0)
+        self.batch_action_bar.set_visible(False)
+
         self.refresh_apps_list()
+
+    def _toggle_selection_mode(self, enabled: Optional[bool] = None) -> None:
+        """Toggles multi-selection mode for batch uninstalls."""
+        if enabled is None:
+            self.selection_mode = not self.selection_mode
+        else:
+            self.selection_mode = enabled
+
+        if not self.selection_mode:
+            self.selected_app_ids.clear()
+            self.btn_batch.set_label("Select")
+            self.batch_action_bar.set_visible(False)
+        else:
+            self.btn_batch.set_label("Cancel")
+            self.batch_action_bar.set_visible(True)
+
+        self.refresh_apps_list()
+
+    def _on_card_checkbox_toggled(self, app_id: str, active: bool) -> None:
+        """Tracks selected app IDs for batch uninstall."""
+        if active:
+            self.selected_app_ids.add(app_id)
+        else:
+            self.selected_app_ids.discard(app_id)
+        self.lbl_batch_count.set_text(f"{len(self.selected_app_ids)} Selected Applications")
+
+    def _on_batch_uninstall_clicked(self) -> None:
+        """Executes sequential batch uninstallation of selected applications."""
+        if not self.selected_app_ids:
+            return
+
+        app_list = list(self.selected_app_ids)
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text=f"Batch Uninstall {len(app_list)} Applications?",
+        )
+
+        res_text = "The following applications will be removed:\n"
+        for aid in app_list:
+            res_text += f"• {aid}\n"
+
+        dialog.format_secondary_text(res_text + "\nAre you sure you want to proceed?")
+
+        content_area = dialog.get_message_area()
+        chk_purge = Gtk.CheckButton(label="Deep Clean: Also purge residual config & cache folders")
+        chk_purge.set_active(True)
+        chk_purge.set_margin_top(8)
+        content_area.pack_start(chk_purge, False, False, 0)
+        content_area.show_all()
+
+        response = dialog.run()
+        purge = chk_purge.get_active()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            count = 0
+            for aid in app_list:
+                if uninstall_app_backend(aid, purge_residuals=purge):
+                    count += 1
+
+            self._toggle_selection_mode(False)
+            self.refresh_apps_list()
+
+            toast = Gtk.MessageDialog(
+                transient_for=self,
+                flags=0,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="Batch Uninstall Complete",
+            )
+            toast.format_secondary_text(
+                f"Successfully uninstalled {count} applications." +
+                ("\nResidual config and cache files were deep cleaned." if purge else "")
+            )
+            toast.run()
+            toast.destroy()
 
     def refresh_apps_list(self) -> None:
         """Queries installed apps and re-populates the list rows."""
@@ -513,6 +619,13 @@ class AppLaunchManagerWindow(Gtk.Window):
         """Constructs row card widget for single installed application."""
         card_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         card_box.get_style_context().add_class("app-card")
+
+        # Checkbox if in multi-selection mode
+        if self.selection_mode:
+            chk = Gtk.CheckButton()
+            chk.set_active(app["app_id"] in self.selected_app_ids)
+            chk.connect("toggled", lambda w, aid=app["app_id"]: self._on_card_checkbox_toggled(aid, w.get_active()))
+            card_box.pack_start(chk, False, False, 4)
 
         # Icon widget
         icon_path = app["icon_path"]
