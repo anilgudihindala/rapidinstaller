@@ -5,8 +5,10 @@ Provides platform detection, binary resolution, environment path expansion,
 and dependency verification helpers.
 """
 
+import json
 import os
 import shutil
+import subprocess
 from typing import Dict, Optional
 
 
@@ -172,4 +174,72 @@ def set_as_default_installer() -> bool:
         os.system("update-mime-database ~/.local/share/mime >/dev/null 2>&1")
 
     return True
+
+
+CONFIG_PATH = os.path.expanduser("~/.config/rapid-installer/config.json")
+
+
+def load_config() -> dict:
+    """Loads user configuration settings from ~/.config/rapid-installer/config.json."""
+    defaults = {
+        "auto_trash_installer": False,
+        "prompt_trash_installer": True,
+    }
+    if os.path.isfile(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                defaults.update(data)
+        except Exception:
+            pass
+    return defaults
+
+
+def save_config(config_dict: dict) -> bool:
+    """Saves user configuration settings to ~/.config/rapid-installer/config.json."""
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(config_dict, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+def move_to_trash(file_path: str) -> bool:
+    """Moves a file or directory to Linux system trash."""
+    if not file_path:
+        return False
+
+    abs_path = os.path.abspath(os.path.expanduser(file_path))
+    if not os.path.exists(abs_path):
+        return False
+
+    # 1. Try gio trash
+    if is_binary_available("gio"):
+        try:
+            res = subprocess.run(["gio", "trash", abs_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0 and not os.path.exists(abs_path):
+                return True
+        except Exception:
+            pass
+
+    # 2. Try trash-cli
+    if is_binary_available("trash-put"):
+        try:
+            res = subprocess.run(["trash-put", abs_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0 and not os.path.exists(abs_path):
+                return True
+        except Exception:
+            pass
+
+    # 3. Fallback: move to ~/.local/share/Trash/files/
+    try:
+        trash_dir = os.path.expanduser("~/.local/share/Trash/files")
+        os.makedirs(trash_dir, exist_ok=True)
+        dest_p = os.path.join(trash_dir, os.path.basename(abs_path))
+        shutil.move(abs_path, dest_p)
+        return True
+    except Exception:
+        return False
 

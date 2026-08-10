@@ -136,6 +136,13 @@ def main(args_list: Optional[List[str]] = None) -> int:
         version=f"AppLaunch Engine v{__version__}",
     )
 
+    parser.add_argument(
+        "--trash",
+        "-t",
+        action="store_true",
+        help="Move installer archive to system Trash after successful installation",
+    )
+
     parsed = parser.parse_args(args_list)
 
     if parsed.list:
@@ -179,7 +186,14 @@ def main(args_list: Optional[List[str]] = None) -> int:
     )
 
     metrics = engine.run_installation(auto_confirm=parsed.yes)
-    return 0 if metrics.get("status") == "SUCCESS" else 1
+    if metrics.get("status") == "SUCCESS":
+        from applaunch.utils.sys_info import load_config, move_to_trash
+        config = load_config()
+        if parsed.trash or config.get("auto_trash_installer"):
+            move_to_trash(archive_file)
+            print(f"[Rapid Installer] Moved installer archive '{archive_file}' to Trash to save space.")
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

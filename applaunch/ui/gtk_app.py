@@ -320,6 +320,14 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_install.connect("clicked", self._on_install_clicked)
         header.pack_end(btn_install)
 
+        # Settings Preferences Button
+        btn_settings = Gtk.Button()
+        img_settings = Gtk.Image.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
+        btn_settings.set_image(img_settings)
+        btn_settings.set_tooltip_text("Rapid Installer Preferences")
+        btn_settings.connect("clicked", lambda w: self._on_settings_clicked())
+        header.pack_end(btn_settings)
+
         # Refresh Button
         btn_refresh = Gtk.Button()
         img_refresh = Gtk.Image.new_from_icon_name("view-refresh-symbolic", Gtk.IconSize.BUTTON)
@@ -754,7 +762,7 @@ class AppLaunchManagerWindow(Gtk.Window):
                     GLib.idle_add(update_ui, 1.0, "Installation complete!")
                     GLib.idle_add(progress_dialog.destroy)
                     GLib.idle_add(self.refresh_apps_list)
-                    GLib.idle_add(self._show_success_dialog, os.path.basename(archive_path))
+                    GLib.idle_add(self._show_success_dialog, archive_path)
                 else:
                     err_msg = metrics.get("error_msg", "Unknown error")
                     GLib.idle_add(progress_dialog.destroy)
@@ -765,20 +773,77 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _show_success_dialog(self, filename: str) -> None:
-        """Displays completion success toast."""
+    def _show_success_dialog(self, archive_path: str) -> None:
+        """Displays completion success dialog with macOS-style Move to Trash prompt."""
+        config = load_config()
+        archive_name = os.path.basename(archive_path)
+
+        # Check if auto-trash setting is enabled
+        if config.get("auto_trash_installer"):
+            move_to_trash(archive_path)
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=0,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="Installation Successful!",
+            )
+            dialog.format_secondary_text(
+                f"Successfully installed '{archive_name}'.\n\n"
+                f"🗑 Installer archive was automatically moved to Trash to save disk space."
+            )
+            dialog.run()
+            dialog.destroy()
+            return
+
+        # Otherwise show macOS-style interactive Trash prompt
         dialog = Gtk.MessageDialog(
             transient_for=self,
             flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text="Installation Successful!",
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text="Installation Successful! Move to Trash?",
         )
+        size_mb = 0
+        if os.path.isfile(archive_path):
+            size_mb = round(os.path.getsize(archive_path) / (1024 * 1024), 1)
+
         dialog.format_secondary_text(
-            f"Application package '{filename}' was installed successfully.\nDesktop shortcut and menu entries have been registered."
+            f"Successfully installed '{archive_name}'.\n\n"
+            f"Package File: {archive_name} ({size_mb} MB)\n"
+            f"Do you want to move the installer archive to Trash to save space?"
         )
-        dialog.run()
+
+        # Checkbox for Auto-Trash setting
+        content_area = dialog.get_message_area()
+        chk_auto = Gtk.CheckButton(label="Always move installer archives to Trash automatically")
+        chk_auto.set_margin_top(8)
+        content_area.pack_start(chk_auto, False, False, 0)
+        content_area.show_all()
+
+        dialog.add_button("🗑 Move to Trash", 101)
+        dialog.add_button("Keep File", 102)
+
+        res = dialog.run()
+        if chk_auto.get_active():
+            config["auto_trash_installer"] = True
+            save_config(config)
+
         dialog.destroy()
+
+        if res == 101:
+            success = move_to_trash(archive_path)
+            if success:
+                toast = Gtk.MessageDialog(
+                    transient_for=self,
+                    flags=0,
+                    message_type=Gtk.MessageType.INFO,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Moved to Trash",
+                )
+                toast.format_secondary_text(f"Moved '{archive_name}' to system Trash.")
+                toast.run()
+                toast.destroy()
 
     def _show_error_dialog(self, err_msg: str) -> None:
         """Displays error toast."""
@@ -791,6 +856,46 @@ class AppLaunchManagerWindow(Gtk.Window):
         )
         dialog.format_secondary_text(f"Error details:\n{err_msg}")
         dialog.run()
+        dialog.destroy()
+
+    def _on_settings_clicked(self) -> None:
+        """Displays Preferences modal dialog."""
+        config = load_config()
+        dialog = Gtk.Dialog(
+            title="Rapid Installer Preferences",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        dialog.set_default_size(480, 220)
+        dialog.add_button("Close", Gtk.ResponseType.CLOSE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(16)
+        box.set_border_width(20)
+
+        lbl_title = Gtk.Label(label="<b>Installer Preferences</b>")
+        lbl_title.set_use_markup(True)
+        lbl_title.set_xalign(0)
+        box.pack_start(lbl_title, False, False, 0)
+
+        chk_auto = Gtk.CheckButton(label="Automatically move installer archives (.tar.gz, .deb) to Trash after installation")
+        chk_auto.set_active(config.get("auto_trash_installer", False))
+        box.pack_start(chk_auto, False, False, 0)
+
+        chk_default = Gtk.CheckButton(label="Set Rapid Installer as default Linux package handler")
+        chk_default.set_active(is_default_installer())
+        box.pack_start(chk_default, False, False, 0)
+
+        box.show_all()
+        dialog.run()
+
+        config["auto_trash_installer"] = chk_auto.get_active()
+        save_config(config)
+
+        if chk_default.get_active() and not is_default_installer():
+            set_as_default_installer()
+            self._update_default_installer_widget()
+
         dialog.destroy()
 
 
