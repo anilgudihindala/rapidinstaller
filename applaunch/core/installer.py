@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 from applaunch.core.desktop import DesktopShortcutGenerator
 from applaunch.core.extractor import ArchiveExtractor, ExtractionError
-from applaunch.core.scanner import DirectoryScanner
+from applaunch.core.scanner import DirectoryScanner, resolve_preferred_launcher_candidate
 from applaunch.ui.zenity import ZenityProgressContext, ZenityUI
 from applaunch.utils.formatter import clean_app_name
 from applaunch.utils.logger import MetricsTracker, logger
@@ -116,8 +116,8 @@ class AppInstallerEngine:
                         f"No executable entry points or launchers found inside extracted directory '{self.dest_dir}'."
                     )
 
-                # Automatically select top candidate based on deep binary scan scoring
-                selected_cand = candidates[0]
+                # Prefer extracted AppRun for AppImages (avoids libfuse2 dependency on Ubuntu 24.04+)
+                selected_cand = resolve_preferred_launcher_candidate(self.dest_dir, candidates)
                 logger.info(
                     f"Smart launcher automatically selected primary launcher: {selected_cand.rel_path} (Score: {selected_cand.score})"
                 )
@@ -137,6 +137,7 @@ class AppInstallerEngine:
                     icon_path=discovered_icon,
                     categories="Utility;Application;",
                     comment=f"Installed via AppLaunch Engine from {os.path.basename(self.archive_path)}",
+                    startup_wm_class=self.name_info.get("short_name", self.name_info["display_name"]).split()[0],
                 )
                 primary_desktop_path = shortcut_gen.generate_and_install(install_to_desktop=True)
                 self.metrics.set_metric("desktop_entry_path", primary_desktop_path)

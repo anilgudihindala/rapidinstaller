@@ -1160,6 +1160,16 @@ class AppLaunchManagerWindow(Gtk.Window):
                 .strip()
             )
             try:
+                from applaunch.core.scanner import resolve_appimage_launch_path
+                import shlex
+
+                command_parts = shlex.split(clean_cmd)
+                if command_parts:
+                    resolved_launch_path = resolve_appimage_launch_path(command_parts[0])
+                    if resolved_launch_path != command_parts[0]:
+                        command_parts[0] = resolved_launch_path
+                        clean_cmd = " ".join(shlex.quote(part) for part in command_parts)
+
                 subprocess.Popen(clean_cmd, shell=True)
                 logger.info(f"Launched application via Exec string: {clean_cmd}")
                 return
@@ -1168,12 +1178,12 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         # 2. Fallback using DirectoryScanner with score heuristics
         if opt_path and os.path.isdir(opt_path):
-            from applaunch.core.scanner import DirectoryScanner
+            from applaunch.core.scanner import DirectoryScanner, resolve_appimage_launch_path
             display_name = app.get("display_name", "")
             scanner = DirectoryScanner(root_dir=opt_path, app_search_slug=display_name)
             candidates = scanner.find_entry_points()
             if candidates:
-                cand_path = candidates[0].full_path
+                cand_path = resolve_appimage_launch_path(candidates[0].full_path)
                 # Check for Electron --no-sandbox flag
                 app_dir = os.path.dirname(cand_path)
                 sandbox_path = os.path.join(app_dir, "chrome-sandbox")
@@ -1490,7 +1500,7 @@ class AppLaunchManagerWindow(Gtk.Window):
         box.set_border_width(20)
 
         lbl_title = Gtk.Label()
-        lbl_title.set_markup("<b>Installer Preferences & Power Tools</b>")
+        lbl_title.set_markup("<b>Installer Preferences &amp; Power Tools</b>")
         lbl_title.set_xalign(0)
         box.pack_start(lbl_title, False, False, 0)
 

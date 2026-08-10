@@ -7,10 +7,20 @@ handling icon deployment, execution flags, and universal $HOME user path mapping
 
 import os
 import shutil
+import subprocess
 from typing import Dict, Optional
 
 from applaunch.utils.logger import logger
 from applaunch.utils.sys_info import get_environment_info, refresh_desktop_database
+
+
+def derive_startup_wm_class(display_name: str, app_id: str) -> str:
+    """Derives a window class name that matches how desktop environments group app windows."""
+    if display_name:
+        first_display_token = display_name.strip().split()[0]
+        if first_display_token:
+            return first_display_token
+    return app_id.replace("-", " ").title().split()[0]
 
 
 class DesktopShortcutGenerator:
@@ -26,6 +36,7 @@ class DesktopShortcutGenerator:
         icon_path: Optional[str] = None,
         categories: str = DEFAULT_CATEGORIES,
         comment: str = "Installed via AppLaunch Engine",
+        startup_wm_class: Optional[str] = None,
     ) -> None:
         self.app_id = app_id
         self.display_name = display_name
@@ -35,6 +46,7 @@ class DesktopShortcutGenerator:
         )
         self.categories = categories
         self.comment = comment
+        self.startup_wm_class = startup_wm_class or derive_startup_wm_class(display_name, app_id)
         self.env = get_environment_info()
 
     def generate_and_install(self, install_to_desktop: bool = True) -> str:
@@ -69,7 +81,7 @@ class DesktopShortcutGenerator:
             f"Icon={installed_icon_name}\n"
             "Terminal=false\n"
             f"Categories={self.categories}\n"
-            f"StartupWMClass={self.app_id}\n"
+            f"StartupWMClass={self.startup_wm_class}\n"
         )
 
         # Primary location: ~/.local/share/applications/
@@ -120,23 +132,58 @@ class DesktopShortcutGenerator:
 
     def _setup_icon(self) -> str:
         """
-        Copies application icon to ~/.local/share/icons/ or returns icon specifier.
+        Copies application icon into the hicolor theme and returns the theme icon name.
         """
         if not self.icon_path or not os.path.isfile(self.icon_path):
             logger.info("Using standard generic fallback icon 'application-x-executable'")
             return "application-x-executable"
 
-        icons_dir = self.env["icons_dir"]
-        os.makedirs(icons_dir, exist_ok=True)
-
-        ext = os.path.splitext(self.icon_path)[1].lower()
-        target_icon_name = f"{self.app_id}{ext}"
-        target_icon_path = os.path.join(icons_dir, target_icon_name)
+        icon_extension = os.path.splitext(self.icon_path)[1].lower()
+        icons_root_directory = os.path.join(self.env["home"], ".local", "share", "icons")
+        os.makedirs(icons_root_directory, exist_ok=True)
 
         try:
-            shutil.copy2(self.icon_path, target_icon_path)
-            logger.info(f"Copied application icon to: {target_icon_path}")
-            return target_icon_path
-        except Exception as e:
-            logger.warning(f"Could not copy custom icon: {str(e)}")
+            if icon_extension == ".svg":
+                scalable_icon_directory = os.path.join(
+                    icons_root_directory, "hicolor", "scalable", "apps"
+                )
+                os.makedirs(scalable_icon_directory, exist_ok=True)
+                scalable_icon_path = os.path.join(scalable_icon_directory, f"{self.app_id}.svg")
+                shutil.copy2(self.icon_path, scalable_icon_path)
+            else:
+                for icon_size in ("512x512", "256x256", "128x128", "64x64"):
+                    sized_icon_directory = os.path.join(
+                        icons_root_directory, "hicolor", icon_size, "apps"
+                    )
+                    os.makedirs(sized_icon_directory, exist_ok=True)
+                    sized_icon_path = os.path.join(
+                        sized_icon_directory, f"{self.app_id}{icon_extension}"
+                    )
+                    shutil.copy2(self.icon_path, sized_icon_path)
+
+            flat_icon_path = os.path.join(icons_root_directory, f"{self.app_id}{icon_extension}")
+            shutil.copy2(self.icon_path, flat_icon_path)
+            self._refresh_icon_theme_cache(icons_root_directory)
+            logger.info(
+                f"Installed application icon into hicolor theme as '{self.app_id}' from {self.icon_path}"
+            )
+            return self.app_id
+        except Exception as error:
+            logger.warning(f"Could not install themed application icon: {str(error)}")
             return "application-x-executable"
+
+    def _refresh_icon_theme_cache(self, icons_root_directory: str) -> None:
+        """Updates GTK icon cache when gtk-update-icon-cache is available."""
+        cache_command = shutil.which("gtk-update-icon-cache")
+        if not cache_command:
+            return
+
+        try:
+            subprocess.run(
+                [cache_command, "-f", "-t", icons_root_directory],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except Exception as error:
+            logger.warning(f"Could not refresh icon theme cache: {error}")

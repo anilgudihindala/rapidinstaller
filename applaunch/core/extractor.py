@@ -117,10 +117,16 @@ class ArchiveExtractor:
         shutil.copy2(self.archive_path, dest_appimage)
         os.chmod(dest_appimage, 0o755)
 
-        # Attempt AppImage extraction if supported to get icons
+        # Attempt AppImage extraction so icons and AppRun are available without FUSE
         try:
-            cmd = [dest_appimage, "--appimage-extract"]
-            subprocess.run(cmd, cwd=self.target_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+            extract_command = [dest_appimage, "--appimage-extract"]
+            subprocess.run(
+                extract_command,
+                cwd=self.target_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=120,
+            )
         except Exception:
             pass
 
