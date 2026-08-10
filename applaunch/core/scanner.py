@@ -57,6 +57,48 @@ class ExecutableCandidate:
         return f"<ExecutableCandidate {self.filename} (score={self.score})>"
 
 
+def resolve_appimage_launch_path(executable_path: str) -> str:
+    """
+    Returns squashfs-root/AppRun when an AppImage was extracted, avoiding libfuse2.
+
+    AppImages require FUSE 2 (libfuse.so.2) which is not installed by default on
+    Ubuntu 24.04+. Running the extracted AppRun launcher works without FUSE.
+    """
+    normalized_path = os.path.abspath(os.path.expanduser(executable_path))
+    if not normalized_path.lower().endswith(".appimage"):
+        return normalized_path
+
+    installation_directory = os.path.dirname(normalized_path)
+    app_run_path = os.path.join(installation_directory, "squashfs-root", "AppRun")
+    if os.path.isfile(app_run_path) and os.access(app_run_path, os.X_OK):
+        logger.info(f"Resolved AppImage launcher to extracted AppRun: {app_run_path}")
+        return app_run_path
+
+    return normalized_path
+
+
+def resolve_preferred_launcher_candidate(
+    installation_directory: str,
+    candidates: List[ExecutableCandidate],
+) -> ExecutableCandidate:
+    """Selects the best launcher, preferring extracted AppRun over raw AppImage files."""
+    if not candidates:
+        raise ValueError("At least one launcher candidate is required.")
+
+    app_run_path = os.path.join(installation_directory, "squashfs-root", "AppRun")
+    if os.path.isfile(app_run_path) and os.access(app_run_path, os.X_OK):
+        for candidate in candidates:
+            if os.path.abspath(candidate.full_path) == os.path.abspath(app_run_path):
+                return candidate
+        return ExecutableCandidate(
+            app_run_path,
+            999,
+            "AppImage extracted AppRun launcher (FUSE-free)",
+        )
+
+    return candidates[0]
+
+
 class DirectoryScanner:
     """Scans extracted application directory trees for binaries and icon resources."""
 

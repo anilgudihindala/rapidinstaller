@@ -66,19 +66,24 @@ def clean_app_name(archive_path: str) -> Dict[str, str]:
         flags=re.IGNORECASE,
     )
 
-    # 2. Check for known application acronyms before stripping
+    # 2. Check for known application acronyms before stripping (whole-token prefix only)
     raw_name_lower = name.lower()
-    for key, val in KNOWN_ACRONYMS.items():
-        if raw_name_lower.startswith(key):
-            # Extract version or remaining string if any
-            remainder = name[len(key) :]
+    for key, acronym_display_name in sorted(
+        KNOWN_ACRONYMS.items(), key=lambda acronym_item: len(acronym_item[0]), reverse=True
+    ):
+        acronym_prefix_pattern = re.compile(
+            rf"^{re.escape(key)}(?:$|[-_.\d])", re.IGNORECASE
+        )
+        acronym_match = acronym_prefix_pattern.match(raw_name_lower)
+        if acronym_match:
+            remainder = name[acronym_match.end() :]
             remainder_clean = format_remainder(remainder)
-            display_title = f"{val} {remainder_clean}".strip()
+            display_title = f"{acronym_display_name} {remainder_clean}".strip()
             slug = sanitize_slug(key)
             return {
                 "display_name": display_title,
                 "app_id": slug,
-                "short_name": val,
+                "short_name": acronym_display_name,
                 "search_slug": re.sub(r"[^a-z0-9]", "", key.lower()),
             }
 
