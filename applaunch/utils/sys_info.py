@@ -206,6 +206,28 @@ def save_config(config_dict: dict) -> bool:
         return False
 
 
+def get_app_residual_paths(app_id: str) -> list:
+    """Scans user environment for residual configuration & cache directories."""
+    home_dir = os.path.expanduser("~")
+    candidates = [
+        os.path.join(home_dir, ".config", app_id),
+        os.path.join(home_dir, ".cache", app_id),
+        os.path.join(home_dir, ".local", "share", app_id),
+    ]
+
+    clean_id = app_id.replace("-", "").replace("_", "")
+    candidates.append(os.path.join(home_dir, ".config", clean_id))
+    candidates.append(os.path.join(home_dir, ".cache", clean_id))
+
+    found = []
+    for path in candidates:
+        if os.path.exists(path) and path not in found:
+            if path != os.path.join(home_dir, ".local", "opt", app_id):
+                found.append(path)
+
+    return found
+
+
 def move_to_trash(file_path: str) -> bool:
     """Moves a file or directory to Linux system trash."""
     if not file_path:

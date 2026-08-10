@@ -575,12 +575,104 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_uninstall.get_style_context().add_class("btn-uninstall")
         btn_uninstall.connect("clicked", lambda w, a=app: self._on_uninstall_app(a))
 
+        # Info Inspector Button
+        btn_info = Gtk.Button()
+        img_info = Gtk.Image.new_from_icon_name("dialog-information-symbolic", Gtk.IconSize.BUTTON)
+        btn_info.set_image(img_info)
+        btn_info.set_tooltip_text("App Inspector & Details")
+        btn_info.connect("clicked", lambda w, a=app: self._on_inspect_app(a))
+
+        actions_box.pack_start(btn_info, False, False, 0)
         actions_box.pack_start(btn_launch, False, False, 0)
         actions_box.pack_start(btn_uninstall, False, False, 0)
 
         card_box.pack_start(actions_box, False, False, 0)
 
         return card_box
+
+    def _on_inspect_app(self, app: dict) -> None:
+        """Displays macOS-style App Details Inspector modal dialog."""
+        dialog = Gtk.Dialog(
+            title=f"App Inspector - {app['display_name']}",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        dialog.set_default_size(520, 320)
+        dialog.add_button("Close", Gtk.ResponseType.CLOSE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(16)
+        box.set_border_width(20)
+
+        hdr_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        icon_path = app.get("icon_path")
+        if icon_path and os.path.isfile(icon_path):
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(icon_path, 64, 64, True)
+                img = Gtk.Image.new_from_pixbuf(pixbuf)
+            except Exception:
+                img = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
+                img.set_pixel_size(64)
+        else:
+            img = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
+            img.set_pixel_size(64)
+
+        hdr_box.pack_start(img, False, False, 0)
+
+        txt_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        txt_box.set_valign(Gtk.Align.CENTER)
+
+        lbl_n = Gtk.Label(label=f"<b>{app['display_name']}</b>")
+        lbl_n.set_use_markup(True)
+        lbl_n.set_xalign(0)
+
+        lbl_i = Gtk.Label(label=f"App ID: {app['app_id']} | Size: {app['size_mb']} MB")
+        lbl_i.set_xalign(0)
+
+        txt_box.pack_start(lbl_n, False, False, 0)
+        txt_box.pack_start(lbl_i, False, False, 0)
+        hdr_box.pack_start(txt_box, True, True, 0)
+
+        box.pack_start(hdr_box, False, False, 0)
+
+        grid = Gtk.Grid()
+        grid.set_column_spacing(12)
+        grid.set_row_spacing(8)
+
+        lbl_l1 = Gtk.Label(label="Installed Path:")
+        lbl_l1.set_xalign(0)
+        lbl_p1 = Gtk.Label(label=app['path'])
+        lbl_p1.set_xalign(0)
+        grid.attach(lbl_l1, 0, 0, 1, 1)
+        grid.attach(lbl_p1, 1, 0, 1, 1)
+
+        lbl_l2 = Gtk.Label(label="CLI Executable:")
+        lbl_l2.set_xalign(0)
+        cli_symlink = os.path.expanduser(f"~/.local/bin/{app['app_id']}")
+        lbl_p2 = Gtk.Label(label=cli_symlink if os.path.exists(cli_symlink) else app.get('exec_cmd', 'Auto-detected'))
+        lbl_p2.set_xalign(0)
+        grid.attach(lbl_l2, 0, 1, 1, 1)
+        grid.attach(lbl_p2, 1, 1, 1, 1)
+
+        lbl_l3 = Gtk.Label(label="Desktop Entry:")
+        lbl_l3.set_xalign(0)
+        lbl_p3 = Gtk.Label(label=app.get('desktop_file', 'Registered in ~/.local/share/applications/'))
+        lbl_p3.set_xalign(0)
+        grid.attach(lbl_l3, 0, 2, 1, 1)
+        grid.attach(lbl_p3, 1, 2, 1, 1)
+
+        box.pack_start(grid, False, False, 0)
+
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btn_folder = Gtk.Button(label="📂 Open Install Folder")
+        btn_folder.connect("clicked", lambda w: subprocess.Popen(["gio", "open", app["path"]]))
+
+        btn_box.pack_start(btn_folder, False, False, 0)
+        box.pack_start(btn_box, False, False, 0)
+
+        dialog.show_all()
+        dialog.run()
+        dialog.destroy()
 
     def _on_launch_app(self, app: dict) -> None:
         """Launches application executable using desktop entry Exec command or DirectoryScanner."""
@@ -635,7 +727,10 @@ class AppLaunchManagerWindow(Gtk.Window):
         logger.warning(f"Could not find valid executable launcher for app: {app}")
 
     def _on_uninstall_app(self, app: dict) -> None:
-        """Presents GTK confirmation dialog and uninstalls application."""
+        """Presents AppCleaner-style Deep Uninstaller GTK dialog."""
+        from applaunch.utils.sys_info import get_app_residual_paths
+        residuals = get_app_residual_paths(app["app_id"])
+
         dialog = Gtk.MessageDialog(
             transient_for=self,
             flags=0,
@@ -643,15 +738,28 @@ class AppLaunchManagerWindow(Gtk.Window):
             buttons=Gtk.ButtonsType.OK_CANCEL,
             text=f"Uninstall {app['display_name']}?",
         )
-        dialog.format_secondary_text(
-            f"This action will permanently delete:\n• Directory: {app['path']}\n• Desktop shortcuts & menu icons.\n\nAre you sure you want to proceed?"
-        )
+
+        res_text = f"• Directory: {app['path']}\n• Desktop shortcuts & CLI symlinks.\n"
+        if residuals:
+            res_text += f"\nDeep Cleaner discovered {len(residuals)} residual config/cache paths:\n"
+            for r in residuals:
+                res_text += f"  - {r}\n"
+
+        dialog.format_secondary_text(res_text + "\nAre you sure you want to proceed?")
+
+        content_area = dialog.get_message_area()
+        chk_purge = Gtk.CheckButton(label="Deep Clean: Also purge residual config & cache folders")
+        chk_purge.set_active(True)
+        chk_purge.set_margin_top(8)
+        content_area.pack_start(chk_purge, False, False, 0)
+        content_area.show_all()
 
         response = dialog.run()
+        purge = chk_purge.get_active()
         dialog.destroy()
 
         if response == Gtk.ResponseType.OK:
-            success = uninstall_app_backend(app["app_id"])
+            success = uninstall_app_backend(app["app_id"], purge_residuals=purge)
             if success:
                 self.refresh_apps_list()
                 toast = Gtk.MessageDialog(
@@ -661,24 +769,28 @@ class AppLaunchManagerWindow(Gtk.Window):
                     buttons=Gtk.ButtonsType.OK,
                     text="Application Uninstalled",
                 )
-                toast.format_secondary_text(f"Successfully uninstalled '{app['display_name']}'.")
+                toast.format_secondary_text(
+                    f"Successfully uninstalled '{app['display_name']}'." +
+                    ("\nResidual config and cache files were deep cleaned." if purge else "")
+                )
                 toast.run()
                 toast.destroy()
 
     def _on_install_clicked(self, widget: Gtk.Widget) -> None:
-        """Opens GTK FileChooserDialog to select an application archive."""
+        """Opens GTK FileChooserDialog with multi-select support to select application archives."""
         chooser = Gtk.FileChooserDialog(
-            title="Select Application Archive Package",
+            title="Select Application Archive Package(s)",
             transient_for=self,
             action=Gtk.FileChooserAction.OPEN,
         )
+        chooser.set_select_multiple(True)
         chooser.add_buttons(
             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT
         )
 
         # File Filter
         filter_archives = Gtk.FileFilter()
-        filter_archives.set_name("Application Archives (*.tar.gz, *.tgz, *.zip, *.7z, *.tar.xz)")
+        filter_archives.set_name("Application Packages (*.tar.gz, *.tgz, *.zip, *.deb, *.rpm, *.7z, *.AppImage)")
         filter_archives.add_mime_type("application/x-compressed-tar")
         filter_archives.add_mime_type("application/x-gzip")
         filter_archives.add_mime_type("application/zip")
@@ -688,16 +800,20 @@ class AppLaunchManagerWindow(Gtk.Window):
         filter_archives.add_pattern("*.tar.gz")
         filter_archives.add_pattern("*.tgz")
         filter_archives.add_pattern("*.zip")
-        filter_archives.add_pattern("*.tar.xz")
+        filter_archives.add_pattern("*.deb")
+        filter_archives.add_pattern("*.rpm")
+        filter_archives.add_pattern("*.AppImage")
+        filter_archives.add_pattern("*.appimage")
         filter_archives.add_pattern("*.7z")
         chooser.add_filter(filter_archives)
 
         response = chooser.run()
-        selected_file = chooser.get_filename()
+        selected_files = chooser.get_filenames()
         chooser.destroy()
 
-        if response == Gtk.ResponseType.ACCEPT and selected_file:
-            self._trigger_installation_flow(selected_file)
+        if response == Gtk.ResponseType.ACCEPT and selected_files:
+            for f in selected_files:
+                self._trigger_installation_flow(f)
 
     def _trigger_installation_flow(self, archive_path: str) -> None:
         """Executes installation pipeline inside background thread with GTK Progress Dialog."""

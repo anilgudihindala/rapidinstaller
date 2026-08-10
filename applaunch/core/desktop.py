@@ -85,6 +85,18 @@ class DesktopShortcutGenerator:
         os.chmod(primary_desktop_file, 0o755)
         logger.info(f"Created primary desktop shortcut: {primary_desktop_file}")
 
+        # Create CLI symlink in ~/.local/bin/<app_id>
+        bin_dir = self.env["bin_dir"]
+        os.makedirs(bin_dir, exist_ok=True)
+        symlink_path = os.path.join(bin_dir, self.app_id)
+        try:
+            if os.path.islink(symlink_path) or os.path.isfile(symlink_path):
+                os.remove(symlink_path)
+            os.symlink(self.exec_path, symlink_path)
+            logger.info(f"Created CLI executable symlink: {symlink_path} -> {self.exec_path}")
+        except Exception as e:
+            logger.warning(f"Could not create CLI symlink for {self.app_id}: {e}")
+
         # Optional: Desktop shortcut on ~/Desktop
         if install_to_desktop:
             desktop_folder = os.path.expanduser("~/Desktop")
