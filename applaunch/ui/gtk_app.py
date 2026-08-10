@@ -29,7 +29,7 @@ from applaunch.utils.sys_info import (
     set_as_default_installer,
 )
 
-# Custom GTK CSS Design System - macOS Sequoia Premium Edition
+# Custom GTK CSS Design System - macOS Sequoia Refined Edition
 CSS_THEME = """
 window {
     background-color: #0b0f17;
@@ -38,14 +38,14 @@ window {
 }
 
 headerbar {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(180deg, #1c2638 0%, #0f172a 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 8px 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    padding: 6px 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .title-header {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     color: #f8fafc;
     letter-spacing: -0.2px;
@@ -58,163 +58,160 @@ headerbar {
 }
 
 .card-overview {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 20px 24px;
-    margin: 16px 20px 12px 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.85) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 18px;
+    margin: 10px 20px 8px 20px;
 }
 
 .stat-label {
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
     color: #64748b;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
 }
 
 .stat-value {
-    font-size: 24px;
-    font-weight: 900;
+    font-size: 14px;
+    font-weight: 700;
     color: #38bdf8;
 }
 
 .app-card {
-    background: linear-gradient(145deg, #162032 0%, #0f172a 100%);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 14px;
-    margin: 6px 20px;
-    padding: 14px 20px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(145deg, #141c2b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    margin: 4px 20px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 150ms ease-in-out;
 }
 
 .app-card:hover {
-    background: linear-gradient(145deg, #1e293b 0%, #162032 100%);
-    border-color: rgba(56, 189, 248, 0.4);
-    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.15);
+    background: linear-gradient(145deg, #1b263a 0%, #141c2b 100%);
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.12);
 }
 
 .app-title {
-    font-size: 16px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 700;
     color: #f8fafc;
     letter-spacing: -0.1px;
 }
 
 .app-subtitle {
-    font-size: 12px;
+    font-size: 11px;
     color: #94a3b8;
     font-weight: 500;
 }
 
 .badge-size {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-    color: #ffffff;
+    background: rgba(2, 132, 199, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
     font-size: 11px;
-    font-weight: 800;
-    border-radius: 20px;
-    padding: 4px 12px;
-    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 3px 10px;
 }
 
 .btn-primary {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
-    font-weight: 800;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 8px 18px;
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 14px;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
 }
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-    box-shadow: 0 6px 18px rgba(56, 189, 248, 0.45);
 }
 
 .btn-default-installer {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     color: #ffffff;
-    font-weight: 800;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 6px 14px;
-    margin-left: 8px;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 5px 12px;
+    margin-left: 6px;
 }
 
 .btn-default-installer:hover {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
 }
 
 .badge-default-active {
-    background: rgba(6, 95, 70, 0.6);
-    border: 1px solid rgba(52, 211, 153, 0.4);
+    background: rgba(6, 95, 70, 0.5);
+    border: 1px solid rgba(52, 211, 153, 0.3);
     color: #34d399;
     font-size: 11px;
-    font-weight: 800;
-    border-radius: 20px;
-    padding: 5px 14px;
-    margin-left: 8px;
+    font-weight: 700;
+    border-radius: 14px;
+    padding: 4px 10px;
+    margin-left: 6px;
 }
 
 .btn-launch {
     background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: #ffffff;
-    font-weight: 800;
-    border-radius: 8px;
+    font-weight: 700;
+    border-radius: 7px;
     border: none;
-    padding: 8px 18px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    padding: 6px 14px;
 }
 
 .btn-launch:hover {
     background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-    box-shadow: 0 6px 16px rgba(52, 211, 153, 0.45);
 }
 
 .btn-uninstall {
     background: rgba(239, 68, 68, 0.08);
     color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    font-weight: 700;
-    border-radius: 8px;
-    padding: 7px 14px;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 5px 12px;
 }
 
 .btn-uninstall:hover {
     background-color: #ef4444;
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
 
 .search-entry {
-    margin: 6px 20px 10px 20px;
-    background-color: #162032;
+    margin: 4px 20px 8px 20px;
+    background-color: #141c2b;
     color: #f8fafc;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+
+.search-entry:focus {
+    border-color: #38bdf8;
 }
 
 .empty-card {
-    background: linear-gradient(145deg, #162032 0%, #0f172a 100%);
-    border: 2px dashed rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
+    background: linear-gradient(145deg, #141c2b 0%, #0f172a 100%);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
     margin: 20px;
-    padding: 48px 24px;
+    padding: 40px 24px;
 }
 
 .empty-title {
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 18px;
+    font-weight: 700;
     color: #f8fafc;
 }
 
 .empty-desc {
-    font-size: 14px;
+    font-size: 13px;
     color: #94a3b8;
 }
 """
@@ -371,11 +368,11 @@ class AppLaunchManagerWindow(Gtk.Window):
             self.default_box.remove(c)
 
         if is_default_installer():
-            badge = Gtk.Label(label="✓ Default System Installer")
+            badge = Gtk.Label(label="Default System Installer")
             badge.get_style_context().add_class("badge-default-active")
             self.default_box.pack_start(badge, False, False, 8)
         else:
-            btn_def = Gtk.Button(label="★ Set as Default Installer")
+            btn_def = Gtk.Button(label="Set as Default")
             btn_def.get_style_context().add_class("btn-default-installer")
             btn_def.set_tooltip_text("Set Rapid Installer as your default handler for .tar.gz, .zip, .deb, .rpm, .AppImage archives")
             btn_def.connect("clicked", self._on_set_default_clicked)
@@ -582,13 +579,25 @@ class AppLaunchManagerWindow(Gtk.Window):
         actions_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         actions_box.set_valign(Gtk.Align.CENTER)
 
-        # Launch Button
-        btn_launch = Gtk.Button(label="🚀 Launch")
+        # Launch / Open Button with symbolic icon
+        btn_launch = Gtk.Button()
+        box_launch = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        img_launch = Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
+        lbl_launch = Gtk.Label(label="Open")
+        box_launch.pack_start(img_launch, False, False, 0)
+        box_launch.pack_start(lbl_launch, False, False, 0)
+        btn_launch.add(box_launch)
         btn_launch.get_style_context().add_class("btn-launch")
         btn_launch.connect("clicked", lambda w, a=app: self._on_launch_app(a))
 
-        # Uninstall Button
-        btn_uninstall = Gtk.Button(label="🗑 Uninstall")
+        # Uninstall / Remove Button with symbolic icon
+        btn_uninstall = Gtk.Button()
+        box_uninstall = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        img_uninstall = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
+        lbl_uninstall = Gtk.Label(label="Remove")
+        box_uninstall.pack_start(img_uninstall, False, False, 0)
+        box_uninstall.pack_start(lbl_uninstall, False, False, 0)
+        btn_uninstall.add(box_uninstall)
         btn_uninstall.get_style_context().add_class("btn-uninstall")
         btn_uninstall.connect("clicked", lambda w, a=app: self._on_uninstall_app(a))
 
@@ -733,8 +742,8 @@ class AppLaunchManagerWindow(Gtk.Window):
                 f"Package Archive: {os.path.basename(archive_path)}\n\n"
                 f"What would you like to do?"
             )
-            dialog.add_button("🚀 Launch Existing App", 101)
-            dialog.add_button("🔄 Reinstall / Upgrade", 102)
+            dialog.add_button("Open Existing App", 101)
+            dialog.add_button("Reinstall / Upgrade", 102)
             dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
 
             res = dialog.run()
@@ -817,7 +826,7 @@ class AppLaunchManagerWindow(Gtk.Window):
             )
             dialog.format_secondary_text(
                 f"Successfully installed '{archive_name}'.\n\n"
-                f"🗑 Installer archive was automatically moved to Trash to save disk space."
+                f"Installer archive was automatically moved to Trash to save disk space."
             )
             dialog.run()
             dialog.destroy()
@@ -848,7 +857,7 @@ class AppLaunchManagerWindow(Gtk.Window):
         content_area.pack_start(chk_auto, False, False, 0)
         content_area.show_all()
 
-        dialog.add_button("🗑 Move to Trash", 101)
+        dialog.add_button("Move to Trash", 101)
         dialog.add_button("Keep File", 102)
 
         res = dialog.run()
