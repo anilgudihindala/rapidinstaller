@@ -346,14 +346,6 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_install.connect("clicked", self._on_install_clicked)
         header.pack_end(btn_install)
 
-        # Discover & Adopt External Applications Button
-        btn_discover = Gtk.Button()
-        img_discover = Gtk.Image.new_from_icon_name("system-search-symbolic", Gtk.IconSize.BUTTON)
-        btn_discover.set_image(img_discover)
-        btn_discover.set_tooltip_text("Discover & Adopt Unmanaged System Applications")
-        btn_discover.connect("clicked", lambda w: self._on_discover_apps_clicked())
-        header.pack_end(btn_discover)
-
         # Settings Preferences Button
         btn_settings = Gtk.Button()
         img_settings = Gtk.Image.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
@@ -1422,13 +1414,13 @@ class AppLaunchManagerWindow(Gtk.Window):
         box.set_spacing(16)
         box.set_border_width(20)
 
-        lbl_title = Gtk.Label(label="<b>Installer Preferences & Power Tools</b>")
-        lbl_title.set_use_markup(True)
+        lbl_title = Gtk.Label()
+        lbl_title.set_markup("<b>Installer Preferences & Power Tools</b>")
         lbl_title.set_xalign(0)
         box.pack_start(lbl_title, False, False, 0)
 
         chk_auto = Gtk.CheckButton(label="Automatically move installer archives (.tar.gz, .deb) to Trash after installation")
-        chk_auto.set_active(config.get("auto_trash_installer", False))
+        chk_auto.set_active(config.get("auto_trash_installer", True))
         box.pack_start(chk_auto, False, False, 0)
 
         chk_default = Gtk.CheckButton(label="Set Rapid Installer as default Linux package handler")
@@ -1439,8 +1431,8 @@ class AppLaunchManagerWindow(Gtk.Window):
         sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         box.pack_start(sep, False, False, 4)
 
-        lbl_tools = Gtk.Label(label="<b>Power Tools</b>")
-        lbl_tools.set_use_markup(True)
+        lbl_tools = Gtk.Label()
+        lbl_tools.set_markup("<b>Power Tools</b>")
         lbl_tools.set_xalign(0)
         box.pack_start(lbl_tools, False, False, 0)
 

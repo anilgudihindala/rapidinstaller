@@ -117,7 +117,29 @@ def get_installed_apps() -> list:
             "exec_cmd": exec_cmd,
             "has_shortcut": has_shortcut,
             "desktop_file": desktop_file if has_shortcut else None,
+            "source": "Rapid Managed",
         })
+
+    # Automatically append discovered unmanaged system apps (Snap, Flatpak, DPKG)
+    try:
+        from applaunch.core.discovery import ExistingAppDiscoverer
+        unmanaged = ExistingAppDiscoverer.scan_unmanaged_applications()
+        managed_ids = {a["app_id"] for a in apps}
+        for u in unmanaged:
+            if u["app_id"] not in managed_ids:
+                apps.append({
+                    "app_id": u["app_id"],
+                    "display_name": u["display_name"],
+                    "path": u.get("desktop_file", "/usr/share/applications"),
+                    "size_mb": 0,
+                    "icon_path": u.get("icon"),
+                    "exec_cmd": u.get("exec_cmd"),
+                    "has_shortcut": True,
+                    "desktop_file": u.get("desktop_file"),
+                    "source": u.get("source", "System App"),
+                })
+    except Exception:
+        pass
 
     return apps
 
@@ -182,7 +204,7 @@ CONFIG_PATH = os.path.expanduser("~/.config/rapid-installer/config.json")
 def load_config() -> dict:
     """Loads user configuration settings from ~/.config/rapid-installer/config.json."""
     defaults = {
-        "auto_trash_installer": False,
+        "auto_trash_installer": True,
         "prompt_trash_installer": True,
     }
     if os.path.isfile(CONFIG_PATH):
