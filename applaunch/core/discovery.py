@@ -20,7 +20,14 @@ SYSTEM_IGNORE_KEYWORDS = [
     "evince", "gucharmap", "yelp", "gnome-calculator", "gnome-calendar",
     "gnome-clocks", "gnome-contacts", "gnome-logs", "gnome-maps",
     "gnome-font-viewer", "gnome-disk-utility", "im-config", "nm-connection-editor",
-    "htop", "top", "bash", "sh", "python", "perl", "vim", "nano"
+    "htop", "top", "bash", "sh", "python", "perl", "vim", "nano",
+    "org.gnome.calculator", "org.gnome.calendar", "org.gnome.clocks",
+    "org.gnome.characters", "org.gnome.diskutility", "simple-scan",
+    "org.gnome.papers", "org.gnome.fileroller", "firmware-updater",
+    "gnome-language-selector", "org.gnome.logs", "nvidia-settings",
+    "org.gnome.seahorse", "org.remmina", "org.gnome.settings",
+    "update-manager", "usb-creator", "org.gnome.sysprof", "org.gnome.ptyxis",
+    "info", "org.gnome.texteditor", "snap-store", "rapid-installer"
 ]
 
 
