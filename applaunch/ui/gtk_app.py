@@ -29,166 +29,193 @@ from applaunch.utils.sys_info import (
     set_as_default_installer,
 )
 
-# Custom GTK CSS Design System
+# Custom GTK CSS Design System - macOS Sequoia Premium Edition
 CSS_THEME = """
 window {
-    background-color: #0f141c;
-    color: #e2e8f0;
-    font-family: 'Inter', 'Segoe UI', 'Ubuntu', sans-serif;
+    background-color: #0b0f17;
+    color: #f1f5f9;
+    font-family: 'Inter', '-apple-system', 'SF Pro Text', 'Ubuntu', sans-serif;
 }
 
 headerbar {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-bottom: 1px solid #334155;
-    padding: 6px 12px;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .title-header {
     font-size: 16px;
-    font-weight: 700;
-    color: #38bdf8;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.2px;
 }
 
 .subtitle-header {
     font-size: 11px;
-    color: #94a3b8;
+    color: #38bdf8;
+    font-weight: 600;
 }
 
 .card-overview {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin: 12px 16px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 16px 20px 12px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .stat-label {
-    font-size: 11px;
-    font-weight: bold;
-    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.8px;
 }
 
 .stat-value {
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 24px;
+    font-weight: 900;
     color: #38bdf8;
 }
 
 .app-card {
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 10px;
-    margin: 6px 16px;
-    padding: 12px 16px;
-    transition: all 200ms ease-in-out;
+    background: linear-gradient(145deg, #162032 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    margin: 6px 20px;
+    padding: 14px 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-card:hover {
-    background-color: #24334a;
-    border-color: #38bdf8;
+    background: linear-gradient(145deg, #1e293b 0%, #162032 100%);
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.15);
 }
 
 .app-title {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 800;
     color: #f8fafc;
+    letter-spacing: -0.1px;
 }
 
 .app-subtitle {
     font-size: 12px;
     color: #94a3b8;
+    font-weight: 500;
 }
 
 .badge-size {
-    background-color: #0284c7;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
     font-size: 11px;
-    font-weight: 700;
-    border-radius: 12px;
-    padding: 2px 10px;
+    font-weight: 800;
+    border-radius: 20px;
+    padding: 4px 12px;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
 }
 
 .btn-primary {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
-    font-weight: 700;
-    border-radius: 8px;
-    border: none;
-    padding: 8px 16px;
+    font-weight: 800;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 18px;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
 }
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    box-shadow: 0 6px 18px rgba(56, 189, 248, 0.45);
 }
 
 .btn-default-installer {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     color: #ffffff;
-    font-weight: 700;
-    border-radius: 8px;
-    border: none;
-    padding: 6px 12px;
+    font-weight: 800;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
     margin-left: 8px;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
 }
 
 .btn-default-installer:hover {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
 }
 
 .badge-default-active {
-    background-color: #065f46;
+    background: rgba(6, 95, 70, 0.6);
+    border: 1px solid rgba(52, 211, 153, 0.4);
     color: #34d399;
     font-size: 11px;
-    font-weight: 700;
-    border-radius: 12px;
-    padding: 4px 10px;
+    font-weight: 800;
+    border-radius: 20px;
+    padding: 5px 14px;
     margin-left: 8px;
 }
 
 .btn-launch {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: #ffffff;
-    font-weight: 700;
-    border-radius: 6px;
+    font-weight: 800;
+    border-radius: 8px;
     border: none;
-    padding: 6px 14px;
+    padding: 8px 18px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .btn-launch:hover {
-    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    box-shadow: 0 6px 16px rgba(52, 211, 153, 0.45);
 }
 
 .btn-uninstall {
-    background-color: transparent;
+    background: rgba(239, 68, 68, 0.08);
     color: #f87171;
-    border: 1px solid #ef4444;
-    font-weight: 600;
-    border-radius: 6px;
-    padding: 6px 12px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 7px 14px;
 }
 
 .btn-uninstall:hover {
-    background-color: #7f1d1d;
+    background-color: #ef4444;
     color: #ffffff;
-}
-
-.empty-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #cbd5e1;
-}
-
-.empty-desc {
-    font-size: 13px;
-    color: #64748b;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
 
 .search-entry {
-    margin: 8px 16px;
-    background-color: #1e293b;
+    margin: 6px 20px 10px 20px;
+    background-color: #162032;
     color: #f8fafc;
-    border: 1px solid #334155;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 8px 14px;
+}
+
+.empty-card {
+    background: linear-gradient(145deg, #162032 0%, #0f172a 100%);
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    margin: 20px;
+    padding: 48px 24px;
+}
+
+.empty-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.empty-desc {
+    font-size: 14px;
+    color: #94a3b8;
 }
 """
 
