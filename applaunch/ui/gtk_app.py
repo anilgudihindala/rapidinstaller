@@ -280,7 +280,6 @@ class AppLaunchManagerWindow(Gtk.Window):
         self.set_default_size(880, 640)
         self.set_position(Gtk.WindowPosition.CENTER)
 
-        self.selection_mode = False
         self.selected_app_ids = set()
 
         # Enable Drag and Drop for package archive files
@@ -346,12 +345,6 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_install.get_style_context().add_class("btn-primary")
         btn_install.connect("clicked", self._on_install_clicked)
         header.pack_end(btn_install)
-
-        # Batch Selection Button
-        self.btn_batch = Gtk.Button(label="Select")
-        self.btn_batch.set_tooltip_text("Select multiple applications to uninstall in batch")
-        self.btn_batch.connect("clicked", lambda w: self._toggle_selection_mode())
-        header.pack_end(self.btn_batch)
 
         # Settings Preferences Button
         btn_settings = Gtk.Button()
@@ -463,8 +456,8 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_batch_uninstall.get_style_context().add_class("btn-uninstall")
         btn_batch_uninstall.connect("clicked", lambda w: self._on_batch_uninstall_clicked())
 
-        btn_batch_cancel = Gtk.Button(label="Cancel Selection")
-        btn_batch_cancel.connect("clicked", lambda w: self._toggle_selection_mode(False))
+        btn_batch_cancel = Gtk.Button(label="Clear Selection")
+        btn_batch_cancel.connect("clicked", lambda w: self._clear_selection())
 
         self.batch_action_bar.pack_start(self.lbl_batch_count)
         self.batch_action_bar.pack_end(btn_batch_uninstall)
@@ -475,22 +468,10 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         self.refresh_apps_list()
 
-    def _toggle_selection_mode(self, enabled: Optional[bool] = None) -> None:
-        """Toggles multi-selection mode for batch uninstalls."""
-        if enabled is None:
-            self.selection_mode = not self.selection_mode
-        else:
-            self.selection_mode = enabled
-
-        if not self.selection_mode:
-            self.selected_app_ids.clear()
-            self.btn_batch.set_label("Select")
-            self.batch_action_bar.set_visible(False)
-        else:
-            self.btn_batch.set_label("Cancel")
-            count = len(self.selected_app_ids)
-            self.batch_action_bar.set_visible(count >= 1)
-
+    def _clear_selection(self) -> None:
+        """Clears selected app checkboxes and hides action bar."""
+        self.selected_app_ids.clear()
+        self.batch_action_bar.set_visible(False)
         self.refresh_apps_list()
 
     def _on_card_checkbox_toggled(self, app_id: str, active: bool) -> None:
@@ -545,7 +526,7 @@ class AppLaunchManagerWindow(Gtk.Window):
                 if uninstall_app_backend(aid, purge_residuals=purge):
                     count += 1
 
-            self._toggle_selection_mode(False)
+            self._clear_selection()
             self.refresh_apps_list()
 
             toast = Gtk.MessageDialog(
@@ -628,15 +609,14 @@ class AppLaunchManagerWindow(Gtk.Window):
         card_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         card_box.get_style_context().add_class("app-card")
 
-        # Checkbox if in multi-selection mode
-        if self.selection_mode:
-            chk = Gtk.CheckButton()
-            chk.set_active(app["app_id"] in self.selected_app_ids)
-            chk.get_style_context().add_class("app-checkbox")
-            chk.set_valign(Gtk.Align.CENTER)
-            chk.connect("toggled", lambda w, aid=app["app_id"]: self._on_card_checkbox_toggled(aid, w.get_active()))
-            card_box.pack_start(chk, False, False, 4)
-            chk.show()
+        # Checkbox is ALWAYS displayed by default on every card
+        chk = Gtk.CheckButton()
+        chk.set_active(app["app_id"] in self.selected_app_ids)
+        chk.get_style_context().add_class("app-checkbox")
+        chk.set_valign(Gtk.Align.CENTER)
+        chk.set_tooltip_text("Select application")
+        chk.connect("toggled", lambda w, aid=app["app_id"]: self._on_card_checkbox_toggled(aid, w.get_active()))
+        card_box.pack_start(chk, False, False, 4)
 
         # Icon widget
         icon_path = app["icon_path"]
