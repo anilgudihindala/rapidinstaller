@@ -12,6 +12,35 @@ import subprocess
 from typing import Dict, Optional
 
 
+def resolve_theme_icon_path(icon_reference: Optional[str], app_id: str) -> Optional[str]:
+    """Resolves a desktop Icon field value to an absolute icon file path for UI rendering."""
+    if not icon_reference:
+        return None
+
+    expanded_icon_reference = os.path.expanduser(icon_reference)
+    if os.path.isfile(expanded_icon_reference):
+        return expanded_icon_reference
+
+    icons_directory = os.path.expanduser("~/.local/share/icons")
+    icon_lookup_candidates = [
+        os.path.join(icons_directory, "hicolor", "512x512", "apps", f"{icon_reference}.png"),
+        os.path.join(icons_directory, "hicolor", "256x256", "apps", f"{icon_reference}.png"),
+        os.path.join(icons_directory, "hicolor", "scalable", "apps", f"{icon_reference}.svg"),
+        os.path.join(icons_directory, f"{icon_reference}.png"),
+        os.path.join(icons_directory, f"{icon_reference}.svg"),
+        os.path.join(icons_directory, f"{app_id}.png"),
+        os.path.join(icons_directory, f"{app_id}.svg"),
+        os.path.join(icons_directory, "hicolor", "512x512", "apps", f"{app_id}.png"),
+        os.path.join(icons_directory, "hicolor", "scalable", "apps", f"{app_id}.svg"),
+    ]
+
+    for icon_candidate_path in icon_lookup_candidates:
+        if os.path.isfile(icon_candidate_path):
+            return icon_candidate_path
+
+    return None
+
+
 def get_environment_info() -> Dict[str, str]:
     """Retrieves Linux system environment variables and path specs."""
     home_dir = os.path.expanduser("~")
@@ -117,11 +146,18 @@ def get_installed_apps() -> list:
                 pass
 
         # Fallback icon search if desktop file didn't specify valid path
-        if not icon_path or not os.path.isfile(icon_path):
-            for ext in [".png", ".svg", ".jpg"]:
-                cand = os.path.join(env["icons_dir"], f"{entry}{ext}")
-                if os.path.isfile(cand):
-                    icon_path = cand
+        icon_path = resolve_theme_icon_path(icon_path, entry)
+        if not icon_path:
+            for extension in [".png", ".svg", ".jpg"]:
+                icon_candidate = os.path.join(env["icons_dir"], f"{entry}{extension}")
+                if os.path.isfile(icon_candidate):
+                    icon_path = icon_candidate
+                    break
+                themed_icon_candidate = os.path.join(
+                    env["icons_dir"], "hicolor", "512x512", "apps", f"{entry}{extension}"
+                )
+                if os.path.isfile(themed_icon_candidate):
+                    icon_path = themed_icon_candidate
                     break
 
         apps.append({

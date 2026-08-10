@@ -137,6 +137,7 @@ class AppInstallerEngine:
                     icon_path=discovered_icon,
                     categories="Utility;Application;",
                     comment=f"Installed via AppLaunch Engine from {os.path.basename(self.archive_path)}",
+                    startup_wm_class=self.name_info.get("short_name", self.name_info["display_name"]).split()[0],
                 )
                 primary_desktop_path = shortcut_gen.generate_and_install(install_to_desktop=True)
                 self.metrics.set_metric("desktop_entry_path", primary_desktop_path)

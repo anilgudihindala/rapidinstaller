@@ -42,6 +42,25 @@ PREFERRED_LAUNCHER_NAMES = [
     "app",
 ]
 
+ICON_PATH_BONUS_PATTERNS = [
+    (r"/hicolor/\d+x\d+/apps/", 90),
+    (r"/hicolor/scalable/apps/", 85),
+    (r"resources/app/resources/linux/", 80),
+    (r"resources/linux/", 75),
+    (r"/share/icons/", 60),
+    (r"/icons/", 45),
+]
+
+ICON_PATH_PENALTY_PATTERNS = [
+    (r"welcome", 80),
+    (r"gettingstarted", 80),
+    (r"onboarding", 80),
+    (r"/dialog/", 60),
+    (r"/media/", 40),
+    (r"extensions/", 70),
+    (r"node_modules/", 90),
+]
+
 
 class ExecutableCandidate:
     """Represents a discovered executable candidate with calculated heuristic score."""
@@ -229,36 +248,146 @@ class DirectoryScanner:
         Returns:
             Absolute path to best matching icon file, or None if not found.
         """
+        priority_icon = self._find_priority_application_icon()
+        if priority_icon:
+            logger.info(f"Selected priority application icon: {priority_icon}")
+            return priority_icon
+
         icon_candidates: List[Tuple[str, int]] = []
         valid_extensions = (".png", ".svg", ".xpm", ".ico")
 
         for dirpath, _, filenames in os.walk(self.root_dir):
             for filename in filenames:
                 fn_lower = filename.lower()
-                if any(fn_lower.endswith(ext) for ext in valid_extensions):
-                    file_path = os.path.join(dirpath, filename)
-                    rel_path = os.path.relpath(file_path, self.root_dir).lower()
+                if not any(fn_lower.endswith(extension) for extension in valid_extensions):
+                    continue
 
-                    score = 10
-                    # Check matching keywords
-                    if "icon" in fn_lower or "logo" in fn_lower or "app" in fn_lower or "code" in fn_lower:
-                        score += 30
-                    if self.app_search_slug and self.app_search_slug in fn_lower:
-                        score += 40
-                    if "pixmaps" in rel_path or "icons" in rel_path or "resources/linux" in rel_path or "media" in rel_path:
-                        score += 35
-                    if "extensions/" in rel_path or "node_modules/" in rel_path:
-                        score -= 50
-                    if fn_lower.endswith(".png") or fn_lower.endswith(".svg"):
-                        score += 15
-
+                file_path = os.path.join(dirpath, filename)
+                score = self._score_icon_candidate(file_path, filename)
+                if score > 0:
                     icon_candidates.append((file_path, score))
 
         if not icon_candidates:
             logger.info("No explicit icon file discovered during scan.")
             return None
 
-        icon_candidates.sort(key=lambda x: x[1], reverse=True)
+        icon_candidates.sort(key=lambda candidate: candidate[1], reverse=True)
         best_icon = icon_candidates[0][0]
         logger.info(f"Selected icon file: {best_icon} (score={icon_candidates[0][1]})")
         return best_icon
+
+    def _resolve_symlink_icon(self, icon_path: str) -> Optional[str]:
+        """Resolves symlinked icon paths such as AppImage .DirIcon entries."""
+        if not os.path.lexists(icon_path):
+            return None
+
+        resolved_icon_path = os.path.realpath(icon_path)
+        if os.path.isfile(resolved_icon_path):
+            return resolved_icon_path
+        return None
+
+    def _find_priority_application_icon(self) -> Optional[str]:
+        """Checks well-known icon locations before heuristic directory scanning."""
+        for relative_dir_icon in (".DirIcon", os.path.join("squashfs-root", ".DirIcon")):
+            resolved_dir_icon = self._resolve_symlink_icon(
+                os.path.join(self.root_dir, relative_dir_icon)
+            )
+            if resolved_dir_icon:
+                return resolved_dir_icon
+
+        hicolor_icon = self._find_hicolor_application_icon()
+        if hicolor_icon:
+            return hicolor_icon
+
+        electron_linux_icon = self._find_electron_linux_icon()
+        if electron_linux_icon:
+            return electron_linux_icon
+
+        return None
+
+    def _find_hicolor_application_icon(self) -> Optional[str]:
+        """Finds the largest icon from Freedesktop hicolor theme folders."""
+        best_icon_path: Optional[str] = None
+        best_icon_size = 0
+
+        for dirpath, _, filenames in os.walk(self.root_dir):
+            normalized_directory = dirpath.replace("\\", "/").lower()
+            if "/hicolor/" not in normalized_directory or "/apps/" not in normalized_directory:
+                continue
+
+            size_match = re.search(r"/(\d+)x(\d+)/", normalized_directory)
+            icon_dimension = int(size_match.group(1)) if size_match else 128
+
+            for filename in filenames:
+                filename_lower = filename.lower()
+                if not filename_lower.endswith((".png", ".svg", ".xpm", ".ico")):
+                    continue
+
+                if icon_dimension >= best_icon_size:
+                    best_icon_size = icon_dimension
+                    best_icon_path = os.path.join(dirpath, filename)
+
+        return best_icon_path
+
+    def _find_electron_linux_icon(self) -> Optional[str]:
+        """Finds standard Electron/VS Code style icons under resources/linux."""
+        preferred_filenames = ("code.png", "app.png", "icon.png")
+        fallback_icon_path: Optional[str] = None
+
+        for dirpath, _, filenames in os.walk(self.root_dir):
+            normalized_directory = dirpath.replace("\\", "/").lower()
+            if not normalized_directory.endswith("resources/linux"):
+                continue
+
+            available_png_files = [
+                filename for filename in filenames if filename.lower().endswith(".png")
+            ]
+            if not available_png_files:
+                continue
+
+            for preferred_filename in preferred_filenames:
+                for available_filename in available_png_files:
+                    if available_filename.lower() == preferred_filename:
+                        return os.path.join(dirpath, available_filename)
+
+            if not fallback_icon_path:
+                fallback_icon_path = os.path.join(dirpath, available_png_files[0])
+
+        return fallback_icon_path
+
+    def _score_icon_candidate(self, file_path: str, filename: str) -> int:
+        """Scores icon candidates, favoring standard Linux app icon locations."""
+        filename_lower = filename.lower()
+        relative_path = os.path.relpath(file_path, self.root_dir).lower()
+        normalized_relative_path = relative_path.replace("\\", "/")
+
+        for penalty_pattern, penalty_points in ICON_PATH_PENALTY_PATTERNS:
+            if re.search(penalty_pattern, normalized_relative_path):
+                return 0
+
+        score = 10
+        if filename_lower.endswith(".png"):
+            score += 35
+        elif filename_lower.endswith(".svg"):
+            score += 15
+        elif filename_lower.endswith((".xpm", ".ico")):
+            score += 10
+
+        if any(keyword in filename_lower for keyword in ("icon", "logo", "app")):
+            score += 25
+
+        if self.app_search_slug:
+            normalized_filename = re.sub(r"[^a-z0-9]", "", filename_lower)
+            if normalized_filename == self.app_search_slug:
+                score += 50
+            elif self.app_search_slug in normalized_filename:
+                score += 30
+
+        for bonus_pattern, bonus_points in ICON_PATH_BONUS_PATTERNS:
+            if re.search(bonus_pattern, normalized_relative_path):
+                score += bonus_points
+
+        if filename_lower in ("code.png", "app.png", "icon.png"):
+            score += 40
+
+        return score
