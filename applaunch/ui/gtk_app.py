@@ -917,10 +917,16 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         # Checkbox is ALWAYS displayed by default on every card
         chk = Gtk.CheckButton()
+        from applaunch.utils.sys_info import is_protected_system_app
+        is_protected = is_protected_system_app(app["app_id"])
+
+        # Checkbox is displayed on card; disabled if protected system app
+        chk = Gtk.CheckButton()
         chk.set_active(app["app_id"] in self.selected_app_ids)
+        chk.set_sensitive(not is_protected)
         chk.get_style_context().add_class("app-checkbox")
         chk.set_valign(Gtk.Align.CENTER)
-        chk.set_tooltip_text("Select application")
+        chk.set_tooltip_text("🔒 System Protected Component" if is_protected else "Select application")
         chk.connect("toggled", lambda w, aid=app["app_id"]: self._on_card_checkbox_toggled(aid, w.get_active()))
         card_box.pack_start(chk, False, False, 4)
 
@@ -958,8 +964,10 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         card_box.pack_start(meta_vbox, True, True, 0)
 
-        # Size badge
-        lbl_size = Gtk.Label(label=f"{app['size_mb']} MB")
+        # Source / Size badge
+        src_tag = app.get("source", "Rapid Managed")
+        badge_str = f"{src_tag} • {app['size_mb']} MB" if app['size_mb'] > 0 else f"{src_tag}"
+        lbl_size = Gtk.Label(label=badge_str)
         lbl_size.get_style_context().add_class("badge-size")
         lbl_size.set_valign(Gtk.Align.CENTER)
         card_box.pack_start(lbl_size, False, False, 8)
@@ -968,7 +976,15 @@ class AppLaunchManagerWindow(Gtk.Window):
         actions_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         actions_box.set_valign(Gtk.Align.CENTER)
 
-        # Launch / Open Button with symbolic icon
+        # Info Inspector Button
+        btn_info = Gtk.Button()
+        img_info = Gtk.Image.new_from_icon_name("dialog-information-symbolic", Gtk.IconSize.BUTTON)
+        btn_info.set_image(img_info)
+        btn_info.set_tooltip_text("App Inspector & Details")
+        btn_info.connect("clicked", lambda w, a=app: self._on_inspect_app(a))
+        actions_box.pack_start(btn_info, False, False, 0)
+
+        # Launch / Open Button
         btn_launch = Gtk.Button()
         box_launch = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         img_launch = Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
@@ -978,30 +994,29 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_launch.add(box_launch)
         btn_launch.get_style_context().add_class("btn-launch")
         btn_launch.connect("clicked", lambda w, a=app: self._on_launch_app(a))
-
-        # Uninstall / Remove Button with symbolic icon
-        btn_uninstall = Gtk.Button()
-        box_uninstall = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        img_uninstall = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
-        lbl_uninstall = Gtk.Label(label="Remove")
-        box_uninstall.pack_start(img_uninstall, False, False, 0)
-        box_uninstall.pack_start(lbl_uninstall, False, False, 0)
-        btn_uninstall.add(box_uninstall)
-        btn_uninstall.get_style_context().add_class("btn-uninstall")
-        btn_uninstall.connect("clicked", lambda w, a=app: self._on_uninstall_app(a))
-
-        # Info Inspector Button
-        btn_info = Gtk.Button()
-        img_info = Gtk.Image.new_from_icon_name("dialog-information-symbolic", Gtk.IconSize.BUTTON)
-        btn_info.set_image(img_info)
-        btn_info.set_tooltip_text("App Inspector & Details")
-        btn_info.connect("clicked", lambda w, a=app: self._on_inspect_app(a))
-
-        actions_box.pack_start(btn_info, False, False, 0)
         actions_box.pack_start(btn_launch, False, False, 0)
-        actions_box.pack_start(btn_uninstall, False, False, 0)
+
+        # Remove Button or Protected Badge
+        if is_protected:
+            badge_prot = Gtk.Label(label="🔒 Protected System App")
+            badge_prot.get_style_context().add_class("badge-default-active")
+            badge_prot.set_valign(Gtk.Align.CENTER)
+            badge_prot.set_tooltip_text("Core OS system application protected from accidental uninstallation")
+            actions_box.pack_start(badge_prot, False, False, 0)
+        else:
+            btn_uninstall = Gtk.Button()
+            box_uninstall = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            img_uninstall = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
+            lbl_uninstall = Gtk.Label(label="Remove")
+            box_uninstall.pack_start(img_uninstall, False, False, 0)
+            box_uninstall.pack_start(lbl_uninstall, False, False, 0)
+            btn_uninstall.add(box_uninstall)
+            btn_uninstall.get_style_context().add_class("btn-uninstall")
+            btn_uninstall.connect("clicked", lambda w, a=app: self._on_uninstall_app(a))
+            actions_box.pack_start(btn_uninstall, False, False, 0)
 
         card_box.pack_start(actions_box, False, False, 0)
+        return card_box
 
         return card_box
 

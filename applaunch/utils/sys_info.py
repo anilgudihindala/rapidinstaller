@@ -38,6 +38,22 @@ def ensure_user_directories() -> None:
         os.makedirs(dir_path, exist_ok=True)
 
 
+# Core OS system applications protected from uninstallation (Android/macOS-style system protection)
+PROTECTED_SYSTEM_APPS = {
+    "org.gnome.settings", "gnome-control-center", "system-settings",
+    "snap-store", "snap-store_snap-store", "ubuntu-software", "gnome-software",
+    "update-manager", "firmware-updater", "firmware-updater_firmware-updater",
+    "org.gnome.ptyxis", "gnome-terminal", "nautilus", "org.gnome.nautilus",
+    "nvidia-settings", "rapid-installer"
+}
+
+
+def is_protected_system_app(app_id: str) -> bool:
+    """Returns True if the application is a core OS system app protected from uninstallation."""
+    app_id_lower = app_id.lower()
+    return any(p in app_id_lower for p in PROTECTED_SYSTEM_APPS)
+
+
 def is_binary_available(binary_name: str) -> bool:
     """Checks if a command-line executable exists in system PATH."""
     return shutil.which(binary_name) is not None

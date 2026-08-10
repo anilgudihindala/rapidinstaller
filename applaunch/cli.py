@@ -51,6 +51,11 @@ def list_installed_apps() -> None:
 
 def uninstall_app(app_id: str) -> bool:
     """Uninstalls an application by App ID, removing opt folder, icons, and shortcuts."""
+    from applaunch.utils.sys_info import is_protected_system_app
+    if is_protected_system_app(app_id):
+        print(f"[Rapid Installer] 🔒 Cannot uninstall '{app_id}': Core system component protected from removal.")
+        return False
+
     env = get_environment_info()
     opt_path = os.path.join(env["opt_dir"], app_id)
     desktop_path = os.path.join(env["apps_dir"], f"{app_id}.desktop")
