@@ -488,7 +488,8 @@ class AppLaunchManagerWindow(Gtk.Window):
             self.batch_action_bar.set_visible(False)
         else:
             self.btn_batch.set_label("Cancel")
-            self.batch_action_bar.set_visible(True)
+            count = len(self.selected_app_ids)
+            self.batch_action_bar.set_visible(count >= 1)
 
         self.refresh_apps_list()
 
@@ -498,7 +499,14 @@ class AppLaunchManagerWindow(Gtk.Window):
             self.selected_app_ids.add(app_id)
         else:
             self.selected_app_ids.discard(app_id)
-        self.lbl_batch_count.set_text(f"{len(self.selected_app_ids)} Selected Applications")
+
+        count = len(self.selected_app_ids)
+        if count >= 1:
+            plural = "s" if count > 1 else ""
+            self.lbl_batch_count.set_text(f"{count} Selected Application{plural}")
+            self.batch_action_bar.set_visible(True)
+        else:
+            self.batch_action_bar.set_visible(False)
 
     def _on_batch_uninstall_clicked(self) -> None:
         """Executes sequential batch uninstallation of selected applications."""
@@ -624,8 +632,11 @@ class AppLaunchManagerWindow(Gtk.Window):
         if self.selection_mode:
             chk = Gtk.CheckButton()
             chk.set_active(app["app_id"] in self.selected_app_ids)
+            chk.get_style_context().add_class("app-checkbox")
+            chk.set_valign(Gtk.Align.CENTER)
             chk.connect("toggled", lambda w, aid=app["app_id"]: self._on_card_checkbox_toggled(aid, w.get_active()))
             card_box.pack_start(chk, False, False, 4)
+            chk.show()
 
         # Icon widget
         icon_path = app["icon_path"]
