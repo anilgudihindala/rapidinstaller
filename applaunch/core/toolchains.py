@@ -206,6 +206,32 @@ class ToolchainManager:
         return True
 
     @staticmethod
+    def get_toolchain_versions(tool_id: str) -> List[str]:
+        """Returns list of available or installed versions for NVM / Pyenv."""
+        if tool_id == "nvm":
+            return ["20 (LTS Iron)", "18 (LTS Hydrogen)", "21 (Current)", "lts/*"]
+        elif tool_id == "pyenv":
+            return ["3.11.8", "3.12.2", "3.10.13", "3.9.18"]
+        return []
+
+    @staticmethod
+    def switch_toolchain_version(tool_id: str, version_str: str) -> bool:
+        """Installs and switches the active version for NVM or Pyenv."""
+        clean_ver = version_str.split()[0]
+        if tool_id == "nvm":
+            cmd = f"bash -c 'source ~/.nvm/nvm.sh && nvm install {clean_ver} && nvm alias default {clean_ver} && nvm use {clean_ver}'"
+        elif tool_id == "pyenv":
+            cmd = f"bash -c 'export PATH=\"$HOME/.pyenv/bin:$PATH\" && pyenv install -s {clean_ver} && pyenv global {clean_ver}'"
+        else:
+            return False
+
+        try:
+            res = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=300)
+            return res.returncode == 0
+        except Exception:
+            return False
+
+    @staticmethod
     def _query_version(cmd: str) -> str:
         """Executes version check shell command and formats clean output string."""
         try:
@@ -219,7 +245,6 @@ class ToolchainManager:
             )
             out = res.stdout.strip() or res.stderr.strip()
             if out:
-                # Return first line of version output
                 return out.splitlines()[0][:40]
         except Exception:
             pass

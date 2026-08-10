@@ -539,6 +539,18 @@ class AppLaunchManagerWindow(Gtk.Window):
         actions_box.set_valign(Gtk.Align.CENTER)
 
         if tool["installed"]:
+            if tool["id"] in ("nvm", "pyenv"):
+                btn_switch = Gtk.Button()
+                box_sw = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                img_sw = Gtk.Image.new_from_icon_name("media-playlist-repeat-symbolic", Gtk.IconSize.BUTTON)
+                lbl_sw = Gtk.Label(label="Switch Version")
+                box_sw.pack_start(img_sw, False, False, 0)
+                box_sw.pack_start(lbl_sw, False, False, 0)
+                btn_switch.add(box_sw)
+                btn_switch.get_style_context().add_class("btn-launch")
+                btn_switch.connect("clicked", lambda w, t=tool: self._on_switch_toolchain_version(t))
+                actions_box.pack_start(btn_switch, False, False, 0)
+
             btn_remove = Gtk.Button()
             box_rm = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             img_rm = Gtk.Image.new_from_icon_name("user-trash-symbolic", Gtk.IconSize.BUTTON)
@@ -563,6 +575,52 @@ class AppLaunchManagerWindow(Gtk.Window):
 
         card_box.pack_start(actions_box, False, False, 0)
         return card_box
+
+    def _on_switch_toolchain_version(self, tool: dict) -> None:
+        """Displays GTK Modal to select and switch active runtime version."""
+        from applaunch.core.toolchains import ToolchainManager
+        versions = ToolchainManager.get_toolchain_versions(tool["id"])
+
+        dialog = Gtk.Dialog(
+            title=f"Switch Version - {tool['display_name']}",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        dialog.set_default_size(440, 200)
+        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+
+        box = dialog.get_content_area()
+        box.set_spacing(12)
+        box.set_border_width(16)
+
+        lbl = Gtk.Label(label=f"<b>Select Active Version for {tool['display_name']}</b>")
+        lbl.set_use_markup(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        combo = Gtk.ComboBoxText()
+        for v in versions:
+            combo.append_text(v)
+        combo.set_active(0)
+        box.pack_start(combo, False, False, 0)
+
+        btn_apply = Gtk.Button(label="Set Active Version")
+        btn_apply.get_style_context().add_class("btn-primary")
+        box.pack_start(btn_apply, False, False, 6)
+
+        def apply_ver(w):
+            selected = combo.get_active_text()
+            dialog.destroy()
+            if selected:
+                def worker():
+                    ToolchainManager.switch_toolchain_version(tool["id"], selected)
+                    GLib.idle_add(self.refresh_toolchains_list)
+                    GLib.idle_add(self._show_toolchain_toast, f"Switched {tool['display_name']} active version to '{selected}'.")
+                threading.Thread(target=worker, daemon=True).start()
+
+        btn_apply.connect("clicked", apply_ver)
+        dialog.show_all()
+        dialog.run()
 
     def _on_install_toolchain(self, tool: dict) -> None:
         """Triggers background installation for toolchain."""
@@ -625,9 +683,12 @@ class AppLaunchManagerWindow(Gtk.Window):
             flags=0,
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
-            text="Toolchain Updated",
+            text="Toolchain Configured!",
         )
-        toast.format_secondary_text(msg)
+        toast.format_secondary_text(
+            f"{msg}\n\n"
+            f"💡 Terminal Notice: Run 'source ~/.bashrc' (or 'source ~/.zshrc') or open a new terminal window to apply changes."
+        )
         toast.run()
         toast.destroy()
 
