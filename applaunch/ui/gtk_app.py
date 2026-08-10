@@ -22,10 +22,15 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from applaunch.core.installer import AppInstallerEngine
 from applaunch.utils.logger import logger
 from applaunch.utils.sys_info import (
+    export_backup_manifest,
     get_environment_info,
     get_installed_apps,
     is_default_installer,
+    load_config,
+    move_to_trash,
     refresh_desktop_database,
+    run_health_diagnostics_and_repair,
+    save_config,
     set_as_default_installer,
 )
 
@@ -988,18 +993,18 @@ class AppLaunchManagerWindow(Gtk.Window):
         """Displays Preferences modal dialog."""
         config = load_config()
         dialog = Gtk.Dialog(
-            title="Rapid Installer Preferences",
+            title="Rapid Installer Preferences & Tools",
             transient_for=self,
             flags=Gtk.DialogFlags.MODAL,
         )
-        dialog.set_default_size(480, 220)
+        dialog.set_default_size(520, 340)
         dialog.add_button("Close", Gtk.ResponseType.CLOSE)
 
         box = dialog.get_content_area()
         box.set_spacing(16)
         box.set_border_width(20)
 
-        lbl_title = Gtk.Label(label="<b>Installer Preferences</b>")
+        lbl_title = Gtk.Label(label="<b>Installer Preferences & Power Tools</b>")
         lbl_title.set_use_markup(True)
         lbl_title.set_xalign(0)
         box.pack_start(lbl_title, False, False, 0)
@@ -1012,6 +1017,32 @@ class AppLaunchManagerWindow(Gtk.Window):
         chk_default.set_active(is_default_installer())
         box.pack_start(chk_default, False, False, 0)
 
+        # Power Tools Section
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        box.pack_start(sep, False, False, 4)
+
+        lbl_tools = Gtk.Label(label="<b>Power Tools</b>")
+        lbl_tools.set_use_markup(True)
+        lbl_tools.set_xalign(0)
+        box.pack_start(lbl_tools, False, False, 0)
+
+        btn_tools_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+
+        btn_repair = Gtk.Button(label="🛠 Repair Shortcuts")
+        btn_repair.connect("clicked", lambda w: self._on_repair_clicked())
+
+        btn_backup = Gtk.Button(label="📥 Export Backup")
+        btn_backup.connect("clicked", lambda w: self._on_export_backup_clicked())
+
+        btn_custom = Gtk.Button(label="+ Custom App Shortcut")
+        btn_custom.connect("clicked", lambda w: self._on_create_custom_shortcut_clicked())
+
+        btn_tools_box.pack_start(btn_repair, False, False, 0)
+        btn_tools_box.pack_start(btn_backup, False, False, 0)
+        btn_tools_box.pack_start(btn_custom, False, False, 0)
+
+        box.pack_start(btn_tools_box, False, False, 0)
+
         dialog.show_all()
         dialog.run()
 
@@ -1022,6 +1053,96 @@ class AppLaunchManagerWindow(Gtk.Window):
             set_as_default_installer()
 
         dialog.destroy()
+
+    def _on_repair_clicked(self) -> None:
+        """Executes health diagnostics and repairs missing shortcuts or CLI symlinks."""
+        diag = run_health_diagnostics_and_repair()
+        toast = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text="Diagnostics & Repair Complete",
+        )
+        toast.format_secondary_text(
+            f"Scanned {diag['apps_scanned']} installed applications.\n\n"
+            f"• Repaired Desktop Shortcuts: {diag['repaired_shortcuts']}\n"
+            f"• Repaired CLI Symlinks: {diag['repaired_symlinks']}"
+        )
+        toast.run()
+        toast.destroy()
+        self.refresh_apps_list()
+
+    def _on_export_backup_clicked(self) -> None:
+        """Exports installed applications manifest to a JSON backup file."""
+        chooser = Gtk.FileChooserDialog(
+            title="Export Installed Applications Backup",
+            transient_for=self,
+            action=Gtk.FileChooserAction.SAVE,
+        )
+        chooser.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.ACCEPT)
+        chooser.set_current_name("rapid-installer-apps-backup.json")
+
+        if chooser.run() == Gtk.ResponseType.ACCEPT:
+            save_path = chooser.get_filename()
+            chooser.destroy()
+            if export_backup_manifest(save_path):
+                toast = Gtk.MessageDialog(
+                    transient_for=self,
+                    flags=0,
+                    message_type=Gtk.MessageType.INFO,
+                    buttons=Gtk.ButtonsType.OK,
+                    text="Backup Exported",
+                )
+                toast.format_secondary_text(f"Successfully saved application backup to:\n{save_path}")
+                toast.run()
+                toast.destroy()
+        else:
+            chooser.destroy()
+
+    def _on_create_custom_shortcut_clicked(self) -> None:
+        """Creates a managed application shortcut for any raw standalone executable or script."""
+        chooser = Gtk.FileChooserDialog(
+            title="Select Standalone Binary or Script",
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        chooser.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT)
+        if chooser.run() == Gtk.ResponseType.ACCEPT:
+            bin_path = chooser.get_filename()
+            chooser.destroy()
+
+            # Name entry dialog
+            entry_dialog = Gtk.Dialog(title="Application Display Name", transient_for=self, flags=Gtk.DialogFlags.MODAL)
+            entry_dialog.add_button("OK", Gtk.ResponseType.OK)
+            box = entry_dialog.get_content_area()
+            box.set_spacing(10)
+            box.set_border_width(14)
+            lbl = Gtk.Label(label="Enter Display Name for Application:")
+            entry = Gtk.Entry()
+            entry.set_text(os.path.basename(bin_path).replace(".AppImage", "").replace(".sh", "").title())
+            box.pack_start(lbl, False, False, 0)
+            box.pack_start(entry, False, False, 0)
+            entry_dialog.show_all()
+            if entry_dialog.run() == Gtk.ResponseType.OK:
+                disp_name = entry.get_text().strip()
+                entry_dialog.destroy()
+                if disp_name:
+                    app_id = disp_name.lower().replace(" ", "-")
+                    dest_dir = os.path.expanduser(f"~/.local/opt/{app_id}")
+                    os.makedirs(dest_dir, exist_ok=True)
+                    dest_bin = os.path.join(dest_dir, os.path.basename(bin_path))
+                    shutil.copy2(bin_path, dest_bin)
+                    os.chmod(dest_bin, 0o755)
+
+                    from applaunch.core.desktop import DesktopShortcutGenerator
+                    gen = DesktopShortcutGenerator(app_id=app_id, display_name=disp_name, exec_path=dest_bin)
+                    gen.generate_and_install()
+                    self.refresh_apps_list()
+            else:
+                entry_dialog.destroy()
+        else:
+            chooser.destroy()
 
 
 def launch_gtk_manager(archive_path: Optional[str] = None) -> int:

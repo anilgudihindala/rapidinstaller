@@ -265,3 +265,69 @@ def move_to_trash(file_path: str) -> bool:
     except Exception:
         return False
 
+
+def export_backup_manifest(target_file: str) -> bool:
+    """Exports list of installed apps and launcher metadata to a JSON backup file."""
+    apps = get_installed_apps()
+    manifest = {
+        "app_count": len(apps),
+        "applications": apps,
+    }
+    try:
+        with open(target_file, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+def run_health_diagnostics_and_repair() -> dict:
+    """Scans installed apps, detects broken desktop shortcuts or CLI symlinks, and repairs them."""
+    apps = get_installed_apps()
+    repaired_shortcuts = 0
+    repaired_symlinks = 0
+    env = get_environment_info()
+
+    for app in apps:
+        app_id = app["app_id"]
+        opt_path = app["path"]
+
+        # 1. Check CLI symlink in ~/.local/bin/
+        cli_symlink = os.path.join(env["bin_dir"], app_id)
+        if not os.path.exists(cli_symlink):
+            try:
+                from applaunch.core.scanner import DirectoryScanner
+                scanner = DirectoryScanner(root_dir=opt_path, app_search_slug=app_id)
+                candidates = scanner.find_entry_points()
+                if candidates:
+                    os.symlink(candidates[0].full_path, cli_symlink)
+                    repaired_symlinks += 1
+            except Exception:
+                pass
+
+        # 2. Check Desktop shortcut in ~/.local/share/applications/
+        desktop_file = os.path.join(env["apps_dir"], f"{app_id}.desktop")
+        if not os.path.exists(desktop_file):
+            try:
+                from applaunch.core.scanner import DirectoryScanner
+                from applaunch.core.desktop import DesktopShortcutGenerator
+                scanner = DirectoryScanner(root_dir=opt_path, app_search_slug=app_id)
+                candidates = scanner.find_entry_points()
+                if candidates:
+                    gen = DesktopShortcutGenerator(
+                        app_id=app_id,
+                        display_name=app["display_name"],
+                        exec_path=candidates[0].full_path,
+                        icon_path=app.get("icon_path"),
+                    )
+                    gen.generate_and_install()
+                    repaired_shortcuts += 1
+            except Exception:
+                pass
+
+    refresh_desktop_database()
+    return {
+        "apps_scanned": len(apps),
+        "repaired_shortcuts": repaired_shortcuts,
+        "repaired_symlinks": repaired_symlinks,
+    }
