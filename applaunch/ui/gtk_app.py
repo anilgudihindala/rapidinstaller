@@ -346,6 +346,14 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_install.connect("clicked", self._on_install_clicked)
         header.pack_end(btn_install)
 
+        # Discover & Adopt External Applications Button
+        btn_discover = Gtk.Button()
+        img_discover = Gtk.Image.new_from_icon_name("system-search-symbolic", Gtk.IconSize.BUTTON)
+        btn_discover.set_image(img_discover)
+        btn_discover.set_tooltip_text("Discover & Adopt Unmanaged System Applications")
+        btn_discover.connect("clicked", lambda w: self._on_discover_apps_clicked())
+        header.pack_end(btn_discover)
+
         # Settings Preferences Button
         btn_settings = Gtk.Button()
         img_settings = Gtk.Image.new_from_icon_name("emblem-system-symbolic", Gtk.IconSize.BUTTON)
@@ -363,6 +371,88 @@ class AppLaunchManagerWindow(Gtk.Window):
         header.pack_end(btn_refresh)
 
         self.set_titlebar(header)
+
+    def _on_discover_apps_clicked(self) -> None:
+        """Scans environment for unmanaged external apps and displays Adoption GTK modal."""
+        from applaunch.core.discovery import ExistingAppDiscoverer
+        unmanaged = ExistingAppDiscoverer.scan_unmanaged_applications()
+
+        dialog = Gtk.Dialog(
+            title=f"Discovered External Applications ({len(unmanaged)})",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        dialog.set_default_size(620, 440)
+        dialog.add_button("Close", Gtk.ResponseType.CLOSE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(12)
+        box.set_border_width(16)
+
+        lbl = Gtk.Label(label="<b>Discovered Unmanaged Applications</b>")
+        lbl.set_use_markup(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        lbl_sub = Gtk.Label(label="These applications were installed via other means (Snap, DPKG, Flatpak). Click 'Adopt' to manage them in Rapid Installer.")
+        lbl_sub.set_xalign(0)
+        box.pack_start(lbl_sub, False, False, 0)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        box.pack_start(scrolled, True, True, 0)
+
+        vbox_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        scrolled.add(vbox_list)
+
+        for app in unmanaged:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            row.get_style_context().add_class("app-card")
+
+            meta_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            meta_box.set_valign(Gtk.Align.CENTER)
+
+            lbl_name = Gtk.Label(label=app["display_name"])
+            lbl_name.get_style_context().add_class("app-title")
+            lbl_name.set_xalign(0)
+
+            exec_preview = app['exec_cmd'][:50] + ("..." if len(app['exec_cmd']) > 50 else "")
+            lbl_source = Gtk.Label(label=f"Source: {app['source']} | Exec: {exec_preview}")
+            lbl_source.get_style_context().add_class("app-subtitle")
+            lbl_source.set_xalign(0)
+
+            meta_box.pack_start(lbl_name, False, False, 0)
+            meta_box.pack_start(lbl_source, False, False, 0)
+            row.pack_start(meta_box, True, True, 0)
+
+            btn_adopt = Gtk.Button(label="Adopt")
+            btn_adopt.get_style_context().add_class("btn-primary")
+            btn_adopt.set_valign(Gtk.Align.CENTER)
+            btn_adopt.connect("clicked", lambda w, a=app, r=row: self._adopt_single_app(a, r, vbox_list))
+            row.pack_start(btn_adopt, False, False, 0)
+
+            vbox_list.pack_start(row, False, False, 0)
+
+        dialog.show_all()
+        dialog.run()
+        dialog.destroy()
+
+    def _adopt_single_app(self, app: dict, row_widget: Gtk.Widget, list_container: Gtk.Container) -> None:
+        """Adopts single application and updates GTK list."""
+        from applaunch.core.discovery import ExistingAppDiscoverer
+        if ExistingAppDiscoverer.adopt_application(app):
+            list_container.remove(row_widget)
+            self.refresh_apps_list()
+            toast = Gtk.MessageDialog(
+                transient_for=self,
+                flags=0,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text="Application Adopted!",
+            )
+            toast.format_secondary_text(f"Successfully adopted '{app['display_name']}' into Rapid Installer!")
+            toast.run()
+            toast.destroy()
 
     def _build_main_ui(self) -> None:
         """Assembles overview metrics banner and application cards container."""

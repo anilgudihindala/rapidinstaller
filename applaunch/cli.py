@@ -154,8 +154,44 @@ def main(args_list: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Installs terminal curl interceptor hook in ~/.bashrc / ~/.zshrc",
     )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="Scans system for unmanaged applications installed by other means",
+    )
+    parser.add_argument(
+        "--adopt",
+        metavar="APP_ID",
+        help="Adopts an unmanaged application into Rapid Installer by App ID",
+    )
 
     parsed = parser.parse_args(args_list)
+
+    if parsed.discover:
+        from applaunch.core.discovery import ExistingAppDiscoverer
+        unmanaged = ExistingAppDiscoverer.scan_unmanaged_applications()
+        print("\n=======================================================")
+        print(f" Rapid Installer - Discovered Unmanaged Apps ({len(unmanaged)})")
+        print("=======================================================")
+        for a in unmanaged:
+            print(f"• {a['display_name']} [{a['app_id']}]")
+            print(f"    Source:       {a['source']}")
+            print(f"    Desktop File: {a['desktop_file']}\n")
+        print("Run 'rapid-installer --adopt <app_id>' to adopt any app into Rapid Installer.")
+        print("=======================================================\n")
+        return 0
+
+    if parsed.adopt:
+        from applaunch.core.discovery import ExistingAppDiscoverer
+        unmanaged = ExistingAppDiscoverer.scan_unmanaged_applications()
+        target = next((a for a in unmanaged if a["app_id"] == parsed.adopt or a["display_name"].lower() == parsed.adopt.lower()), None)
+        if target:
+            ExistingAppDiscoverer.adopt_application(target)
+            print(f"[Rapid Installer] Successfully adopted '{target['display_name']}' into Rapid Installer.")
+            return 0
+        else:
+            print(f"[Rapid Installer] Could not find unmanaged app '{parsed.adopt}'. Run --discover to view available apps.")
+            return 1
 
     if parsed.setup_curl_hook:
         from applaunch.utils.shell_env import inject_shell_profile_block
