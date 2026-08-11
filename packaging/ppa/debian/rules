@@ -1,4 +1,11 @@
 #!/usr/bin/make -f
 
+clean:
+	rm -rf build/ *.egg-info
+
+build:
+
+binary:
+
 %:
-	dh $@ --with python3
+	@echo "Building..."

@@ -1,7 +1,7 @@
 Source: rapid-installer
 Section: utils
 Priority: optional
-Maintainer: Anil Gudihindala <https://github.com/anilgudihindala/RapidInstaller>
+Maintainer: Anil Gudihindala <anilgudihindala@github.com>
 Build-Depends: debhelper-compat (= 13), python3-all
 Standards-Version: 4.6.2
 Homepage: https://github.com/anilgudihindala/RapidInstaller
