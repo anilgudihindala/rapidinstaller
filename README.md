@@ -8,6 +8,8 @@
 <br>
 
 <div align="center">
+  <img src="assets/rapid_installer_dashboard.jpg" alt="Rapid Installer GTK Dashboard & Installation Dialog" width="850"/>
+  <br><br>
 
 ### 📥 Direct Download & Installation Options
 
