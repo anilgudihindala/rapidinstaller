@@ -1,5 +1,5 @@
-rapid-installer (1.0.0-1ppa1) noble; urgency=medium
+rapid-installer (1.0.0-1ppa2) noble; urgency=medium
 
-  * Initial release v1.0.0 of Rapid Installer for Ubuntu PPA.
+  * Fix binary target in debian/rules for Launchpad PPA automated build farm.
 
- -- Anil Gudihindala <anilgudihindala@github.com>  Tue, 11 Aug 2026 13:56:00 +0530
+ -- Anil Gudihindala <anilgudihindala@github.com>  Tue, 11 Aug 2026 14:21:00 +0530

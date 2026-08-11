@@ -1,11 +1,30 @@
 #!/usr/bin/make -f
 
 clean:
-	rm -rf build/ *.egg-info
+	rm -rf debian/rapid-installer debian/files debian/*.substvars build/
 
 build:
+	@echo "Build phase complete."
+
+binary-indep: binary
+
+binary-arch: binary
 
 binary:
+	rm -rf debian/rapid-installer
+	mkdir -p debian/rapid-installer/usr/bin
+	mkdir -p debian/rapid-installer/usr/share/rapid-installer
+	mkdir -p debian/rapid-installer/usr/share/applications
+	mkdir -p debian/rapid-installer/usr/share/pixmaps
+	mkdir -p debian/rapid-installer/DEBIAN
 
-%:
-	@echo "Building..."
+	cp -r applaunch main.py smart_installer.py debian/rapid-installer/usr/share/rapid-installer/
+	cp desktop/rapid-installer.desktop debian/rapid-installer/usr/share/applications/
+	cp assets/rapid_installer_dashboard.jpg debian/rapid-installer/usr/share/pixmaps/rapid-installer.jpg 2>/dev/null || true
+
+	echo '#!/usr/bin/env bash' > debian/rapid-installer/usr/bin/rapid-installer
+	echo 'exec python3 /usr/share/rapid-installer/main.py "$@"' >> debian/rapid-installer/usr/bin/rapid-installer
+	chmod 755 debian/rapid-installer/usr/bin/rapid-installer
+
+	dpkg-gencontrol -prapid-installer
+	dpkg-deb --build debian/rapid-installer ..
