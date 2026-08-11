@@ -47,6 +47,13 @@ class DesktopShortcutGenerator:
         Returns:
             Absolute path to primary .desktop file in ~/.local/share/applications/.
         """
+        # Ensure binary executable permission is set
+        if os.path.isfile(self.exec_path):
+            try:
+                os.chmod(self.exec_path, 0o755)
+            except Exception:
+                pass
+
         # Ensure icon is in place
         installed_icon_name = self._setup_icon()
 
@@ -66,6 +73,7 @@ class DesktopShortcutGenerator:
             f"Name={self.display_name}\n"
             f"Comment={self.comment}\n"
             f"Exec={exec_cmd}\n"
+            f"Path={app_dir}\n"
             f"Icon={installed_icon_name}\n"
             "Terminal=false\n"
             f"Categories={self.categories}\n"
@@ -81,8 +89,8 @@ class DesktopShortcutGenerator:
         with open(primary_desktop_file, "w", encoding="utf-8") as f:
             f.write(desktop_content)
 
-        # Apply executable permission flag
-        os.chmod(primary_desktop_file, 0o755)
+        from applaunch.utils.sys_info import trust_desktop_file
+        trust_desktop_file(primary_desktop_file)
         logger.info(f"Created primary desktop shortcut: {primary_desktop_file}")
 
         # Create CLI symlink in ~/.local/bin/<app_id>
@@ -106,8 +114,8 @@ class DesktopShortcutGenerator:
                 )
                 try:
                     shutil.copy2(primary_desktop_file, user_desktop_file)
-                    os.chmod(user_desktop_file, 0o755)
-                    logger.info(f"Copied desktop shortcut to: {user_desktop_file}")
+                    trust_desktop_file(user_desktop_file)
+                    logger.info(f"Copied desktop shortcut with trusted metadata to: {user_desktop_file}")
                 except Exception as e:
                     logger.warning(
                         f"Failed to copy shortcut to ~/Desktop: {str(e)}"
@@ -120,7 +128,8 @@ class DesktopShortcutGenerator:
 
     def _setup_icon(self) -> str:
         """
-        Copies application icon to ~/.local/share/icons/ or returns icon specifier.
+        Copies application icon to ~/.local/share/icons/ and hicolor theme,
+        converting .ico or .xpm formats to .png if needed.
         """
         if not self.icon_path or not os.path.isfile(self.icon_path):
             logger.info("Using standard generic fallback icon 'application-x-executable'")
@@ -130,13 +139,44 @@ class DesktopShortcutGenerator:
         os.makedirs(icons_dir, exist_ok=True)
 
         ext = os.path.splitext(self.icon_path)[1].lower()
+
+        # If icon is .ico or .xpm, convert to .png using PIL if available
+        if ext in (".ico", ".xpm"):
+            try:
+                from PIL import Image
+                target_icon_name = f"{self.app_id}.png"
+                target_icon_path = os.path.join(icons_dir, target_icon_name)
+                with Image.open(self.icon_path) as img:
+                    img.save(target_icon_path, format="PNG")
+                logger.info(f"Converted {ext} icon to PNG: {target_icon_path}")
+                self._install_to_hicolor(target_icon_path)
+                return target_icon_path
+            except Exception as e:
+                logger.warning(f"Could not convert {ext} icon: {e}")
+
         target_icon_name = f"{self.app_id}{ext}"
         target_icon_path = os.path.join(icons_dir, target_icon_name)
 
         try:
             shutil.copy2(self.icon_path, target_icon_path)
             logger.info(f"Copied application icon to: {target_icon_path}")
+            self._install_to_hicolor(target_icon_path)
             return target_icon_path
         except Exception as e:
             logger.warning(f"Could not copy custom icon: {str(e)}")
             return "application-x-executable"
+
+    def _install_to_hicolor(self, icon_file: str) -> None:
+        """Installs icon copy into ~/.local/share/icons/hicolor structure for GTK theme resolution."""
+        try:
+            ext = os.path.splitext(icon_file)[1].lower()
+            home = os.path.expanduser("~")
+            if ext == ".svg":
+                hicolor_dir = os.path.join(home, ".local", "share", "icons", "hicolor", "scalable", "apps")
+            else:
+                hicolor_dir = os.path.join(home, ".local", "share", "icons", "hicolor", "48x48", "apps")
+            os.makedirs(hicolor_dir, exist_ok=True)
+            target = os.path.join(hicolor_dir, f"{self.app_id}{ext}")
+            shutil.copy2(icon_file, target)
+        except Exception as e:
+            logger.debug(f"Hicolor icon copy failed: {e}")

@@ -26,6 +26,22 @@ TARGET_ICONS_DIR="$HOME/.local/share/icons"
 
 mkdir -p "$TARGET_BIN_DIR" "$TARGET_APPS_DIR" "$TARGET_ENGINE_DIR" "$TARGET_OPT_DIR" "$TARGET_ICONS_DIR" "$HOME/Desktop"
 
+# Handle one-line curl | bash execution
+if [ ! -d "$SCRIPT_DIR/applaunch" ]; then
+    echo -e "${BLUE}[INFO]${RESET} Fetching Rapid Installer payload from GitHub..."
+    TMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TMP_DIR"' EXIT
+    if command -v git &>/dev/null; then
+        git clone --depth 1 https://github.com/anilgudihindala/RapidInstaller.git "$TMP_DIR/repo" >/dev/null 2>&1 || true
+    fi
+    if [ ! -d "$TMP_DIR/repo/applaunch" ]; then
+        curl -fsSL https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip -o "$TMP_DIR/repo.zip"
+        unzip -q "$TMP_DIR/repo.zip" -d "$TMP_DIR"
+        mv "$TMP_DIR/RapidInstaller-main" "$TMP_DIR/repo"
+    fi
+    SCRIPT_DIR="$TMP_DIR/repo"
+fi
+
 # 2. Deploy Engine Files
 echo -e "${BLUE}[INFO]${RESET} Deploying Rapid Installer engine files to $TARGET_ENGINE_DIR..."
 rm -rf "$TARGET_ENGINE_DIR"/*
@@ -54,6 +70,10 @@ if [ -f "$SCRIPT_DIR/desktop/rapid-installer.desktop" ]; then
     chmod +x "$TARGET_APPS_DIR/rapid-installer.desktop"
     cp "$SCRIPT_DIR/desktop/rapid-installer.desktop" "$HOME/Desktop/Rapid Installer.desktop"
     chmod +x "$HOME/Desktop/Rapid Installer.desktop"
+    if command -v gio &>/dev/null; then
+        gio set "$HOME/Desktop/Rapid Installer.desktop" metadata::trusted true >/dev/null 2>&1 || true
+        pkill -f ding.js >/dev/null 2>&1 || true
+    fi
 fi
 
 # 5. Set MIME Associations

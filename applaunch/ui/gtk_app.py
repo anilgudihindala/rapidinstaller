@@ -174,6 +174,23 @@ headerbar {
     background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
 }
 
+.btn-launching {
+    background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 7px;
+    border: none;
+    padding: 6px 14px;
+}
+
+.toast-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 10px;
+    color: #f8fafc;
+    padding: 10px 18px;
+}
+
 .btn-uninstall {
     background: rgba(239, 68, 68, 0.08);
     color: #f87171;
@@ -474,10 +491,49 @@ class AppLaunchManagerWindow(Gtk.Window):
             toast.run()
             toast.destroy()
 
+    def show_toast(self, message: str, icon_name: str = "media-playback-start-symbolic", duration_sec: int = 4) -> None:
+        """Displays a modern overlay toast banner at the bottom of the window."""
+        if hasattr(self, "_active_toast") and self._active_toast:
+            try:
+                self._toast_overlay.remove(self._active_toast)
+            except Exception:
+                pass
+            self._active_toast = None
+
+        toast_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        toast_box.get_style_context().add_class("toast-banner")
+
+        img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.BUTTON)
+        lbl = Gtk.Label()
+        lbl.set_markup(message)
+
+        toast_box.pack_start(img, False, False, 0)
+        toast_box.pack_start(lbl, False, False, 0)
+        toast_box.set_halign(Gtk.Align.CENTER)
+        toast_box.set_valign(Gtk.Align.END)
+        toast_box.set_margin_bottom(20)
+
+        self._active_toast = toast_box
+        self._toast_overlay.add_overlay(toast_box)
+        toast_box.show_all()
+
+        def hide_toast():
+            if hasattr(self, "_active_toast") and self._active_toast == toast_box:
+                try:
+                    self._toast_overlay.remove(toast_box)
+                except Exception:
+                    pass
+                self._active_toast = None
+            return False
+
+        GLib.timeout_add_seconds(duration_sec, hide_toast)
+
     def _build_main_ui(self) -> None:
         """Assembles overview metrics banner and application cards container."""
         main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.add(main_vbox)
+        self._toast_overlay = Gtk.Overlay()
+        self._toast_overlay.add(main_vbox)
+        self.add(self._toast_overlay)
 
         # --- Overview Cards Banner ---
         overview_card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
@@ -1021,7 +1077,7 @@ class AppLaunchManagerWindow(Gtk.Window):
         box_launch.pack_start(lbl_launch, False, False, 0)
         btn_launch.add(box_launch)
         btn_launch.get_style_context().add_class("btn-launch")
-        btn_launch.connect("clicked", lambda w, a=app: self._on_launch_app(a))
+        btn_launch.connect("clicked", lambda w, a=app: self._on_launch_app(a, btn_widget=w))
         actions_box.pack_start(btn_launch, False, False, 0)
 
         # Remove Button or Protected Badge
@@ -1125,62 +1181,263 @@ class AppLaunchManagerWindow(Gtk.Window):
         btn_folder = Gtk.Button(label="📂 Open Install Folder")
         btn_folder.connect("clicked", lambda w: subprocess.Popen(["gio", "open", app["path"]]))
 
+    def _on_launch_app(self, app: dict, btn_widget: Optional[Gtk.Widget] = None) -> None:
+        """Launches application executable using desktop entry, Exec command, or DirectoryScanner with UI feedback."""
+        import re
+        display_name = app.get("display_name", app.get("app_id", "Application"))
+
+        # 1. Show Toast Notification
+        if hasattr(self, "show_toast"):
+            self.show_toast(f"🚀 Opening <b>{display_name}</b>... Please wait a moment", icon_name="media-playback-start-symbolic", duration_sec=4)
+
+        # 2. Update Button to Spinner + "Launching..."
+        old_child = None
+        if btn_widget and isinstance(btn_widget, Gtk.Button):
+            try:
+                btn_widget.set_sensitive(False)
+                btn_widget.get_style_context().add_class("btn-launching")
+                old_child = btn_widget.get_child()
+                if old_child:
+                    btn_widget.remove(old_child)
+
+                spin_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                spinner = Gtk.Spinner()
+                spinner.start()
+                lbl_spin = Gtk.Label(label="Launching...")
+                spin_box.pack_start(spinner, False, False, 0)
+                spin_box.pack_start(lbl_spin, False, False, 0)
+                btn_widget.add(spin_box)
+                btn_widget.show_all()
+            except Exception as e:
+                logger.debug(f"Could not update button widget state: {e}")
+
+        # 3. Set Mouse Progress Cursor
+        try:
+            gdk_win = self.get_window()
+            if gdk_win:
+                display = gdk_win.get_display()
+                cursor = Gdk.Cursor.new_from_name(display, "progress") or Gdk.Cursor.new_from_name(display, "wait")
+                gdk_win.set_cursor(cursor)
+        except Exception:
+            pass
+
+        # Restoration function after 3.5s timeout
+        def restore_ui_state():
+            if btn_widget and isinstance(btn_widget, Gtk.Button):
+                try:
+                    btn_widget.get_style_context().remove_class("btn-launching")
+                    cur_child = btn_widget.get_child()
+                    if cur_child:
+                        btn_widget.remove(cur_child)
+                    if old_child:
+                        btn_widget.add(old_child)
+                    else:
+                        box_l = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                        img_l = Gtk.Image.new_from_icon_name("media-playback-start-symbolic", Gtk.IconSize.BUTTON)
+                        lbl_l = Gtk.Label(label="Open")
+                        box_l.pack_start(img_l, False, False, 0)
+                        box_l.pack_start(lbl_l, False, False, 0)
+                        btn_widget.add(box_l)
+                    btn_widget.set_sensitive(True)
+                    btn_widget.show_all()
+                except Exception:
+                    pass
+
+            try:
+                gdk_win = self.get_window()
+                if gdk_win:
+                    gdk_win.set_cursor(None)
+            except Exception:
+                pass
+            return False
+
+        GLib.timeout_add_seconds(4, restore_ui_state)
+
+        app_id = app.get("app_id")
+        opt_path = app.get("path")
+        exec_cmd = app.get("exec_cmd")
+        desktop_file = app.get("desktop_file")
+
+        # 1. Try launching using desktop shortcut via gio launch / gtk-launch
+        search_desktop_paths = []
+        if desktop_file and os.path.isfile(desktop_file):
+            search_desktop_paths.append(desktop_file)
+        if app_id:
+            search_desktop_paths.append(os.path.expanduser(f"~/.local/share/applications/{app_id}.desktop"))
+
+        for d_path in search_desktop_paths:
+            if os.path.isfile(d_path):
+                # Try GIO desktop launch first
+                try:
+                    p = subprocess.Popen(["gio", "launch", d_path], start_new_session=True)
+                    logger.info(f"Launched application via gio launch: {d_path}")
+                    return
+                except Exception as e:
+                    logger.debug(f"gio launch failed for {d_path}: {e}")
+
+                try:
+                    d_basename = os.path.basename(d_path)
+                    p = subprocess.Popen(["gtk-launch", d_basename], start_new_session=True)
+                    logger.info(f"Launched application via gtk-launch: {d_basename}")
+                    return
+                except Exception as e:
+                    logger.debug(f"gtk-launch failed for {d_basename}: {e}")
+
+        # 2. Extract Exec command if not provided
+        if not exec_cmd:
+            for d_path in search_desktop_paths:
+                if os.path.isfile(d_path):
+                    try:
+                        with open(d_path, "r", encoding="utf-8") as f:
+                            for line in f:
+                                if line.startswith("Exec="):
+                                    exec_cmd = line.strip().split("=", 1)[1]
+                                    break
+                    except Exception:
+                        pass
+                    if exec_cmd:
+                        break
+
+        # Setup standard PATH environment
+        env = os.environ.copy()
+        home = os.path.expanduser("~")
+        local_bin = os.path.join(home, ".local", "bin")
+        path_list = [local_bin, "/snap/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        current_path = env.get("PATH", "")
+        for p_item in path_list:
+            if p_item not in current_path.split(os.path.pathsep):
+                current_path = f"{p_item}:{current_path}"
+        env["PATH"] = current_path
+
+        # Determine working directory
+        cwd = opt_path if (opt_path and os.path.isdir(opt_path)) else None
+
+        # 3. Direct execution of Exec command line
+        if exec_cmd:
+            clean_cmd = re.sub(r"%[a-zA-Z]", "", exec_cmd).strip()
+            tokens = clean_cmd.split()
+            first_token = tokens[0].strip('"').strip("'") if tokens else ""
+
+            # Ensure CLI binary executable bit if it points to a local file
+            if first_token and os.path.isfile(first_token):
+                try:
+                    os.chmod(first_token, 0o755)
+                    if not cwd:
+                        cwd = os.path.dirname(first_token)
+                except Exception:
+                    pass
+
+            try:
+                subprocess.Popen(clean_cmd, shell=True, cwd=cwd, env=env, start_new_session=True)
+                logger.info(f"Launched application via Exec string: {clean_cmd} (cwd={cwd})")
+                return
+            except Exception as e:
+                logger.error(f"Failed to launch app via Exec string '{clean_cmd}': {e}")
+
+        # 4. Deep fallback using DirectoryScanner with entry points
+        if opt_path and os.path.isdir(opt_path):
+            from applaunch.core.scanner import DirectoryScanner
+            search_slug = app_id or display_name
+            scanner = DirectoryScanner(root_dir=opt_path, app_search_slug=search_slug)
+            candidates = scanner.find_entry_points()
+            if candidates:
+                cand_path = candidates[0].full_path
+                try:
+                    os.chmod(cand_path, 0o755)
+                except Exception:
+                    pass
+                app_dir = os.path.dirname(cand_path)
+                sandbox_path = os.path.join(app_dir, "chrome-sandbox")
+                cmd_run = f'"{cand_path}" --no-sandbox' if os.path.isfile(sandbox_path) else f'"{cand_path}"'
+                subprocess.Popen(cmd_run, shell=True, cwd=app_dir, env=env, start_new_session=True)
+                logger.info(f"Launched scanned candidate binary: {cmd_run} (cwd={app_dir})")
+                return
+
+        logger.error(f"Could not launch application '{app.get('display_name', app_id)}': No valid executable found.")
+
+    def _on_inspect_app(self, app: dict) -> None:
+        """Displays macOS-style App Details Inspector modal dialog."""
+        dialog = Gtk.Dialog(
+            title=f"App Inspector - {app['display_name']}",
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+        )
+        dialog.set_default_size(520, 320)
+        dialog.add_button("Close", Gtk.ResponseType.CLOSE)
+
+        box = dialog.get_content_area()
+        box.set_spacing(16)
+        box.set_border_width(20)
+
+        hdr_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        icon_path = app.get("icon_path")
+        if icon_path and os.path.isfile(icon_path):
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(icon_path, 64, 64, True)
+                img = Gtk.Image.new_from_pixbuf(pixbuf)
+            except Exception:
+                img = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
+                img.set_pixel_size(64)
+        else:
+            img = Gtk.Image.new_from_icon_name("application-x-executable", Gtk.IconSize.DIALOG)
+            img.set_pixel_size(64)
+
+        hdr_box.pack_start(img, False, False, 0)
+
+        txt_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        txt_box.set_valign(Gtk.Align.CENTER)
+
+        lbl_n = Gtk.Label(label=f"<b>{app['display_name']}</b>")
+        lbl_n.set_use_markup(True)
+        lbl_n.set_xalign(0)
+
+        lbl_i = Gtk.Label(label=f"App ID: {app['app_id']} | Size: {app['size_mb']} MB")
+        lbl_i.set_xalign(0)
+
+        txt_box.pack_start(lbl_n, False, False, 0)
+        txt_box.pack_start(lbl_i, False, False, 0)
+        hdr_box.pack_start(txt_box, True, True, 0)
+
+        box.pack_start(hdr_box, False, False, 0)
+
+        grid = Gtk.Grid()
+        grid.set_column_spacing(12)
+        grid.set_row_spacing(8)
+
+        lbl_l1 = Gtk.Label(label="Installed Path:")
+        lbl_l1.set_xalign(0)
+        lbl_p1 = Gtk.Label(label=app['path'])
+        lbl_p1.set_xalign(0)
+        grid.attach(lbl_l1, 0, 0, 1, 1)
+        grid.attach(lbl_p1, 1, 0, 1, 1)
+
+        lbl_l2 = Gtk.Label(label="CLI Executable:")
+        lbl_l2.set_xalign(0)
+        cli_symlink = os.path.expanduser(f"~/.local/bin/{app['app_id']}")
+        lbl_p2 = Gtk.Label(label=cli_symlink if os.path.exists(cli_symlink) else app.get('exec_cmd', 'Auto-detected'))
+        lbl_p2.set_xalign(0)
+        grid.attach(lbl_l2, 0, 1, 1, 1)
+        grid.attach(lbl_p2, 1, 1, 1, 1)
+
+        lbl_l3 = Gtk.Label(label="Desktop Entry:")
+        lbl_l3.set_xalign(0)
+        lbl_p3 = Gtk.Label(label=app.get('desktop_file', 'Registered in ~/.local/share/applications/'))
+        lbl_p3.set_xalign(0)
+        grid.attach(lbl_l3, 0, 2, 1, 1)
+        grid.attach(lbl_p3, 1, 2, 1, 1)
+
+        box.pack_start(grid, False, False, 0)
+
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btn_folder = Gtk.Button(label="📂 Open Install Folder")
+        btn_folder.connect("clicked", lambda w: subprocess.Popen(["gio", "open", app["path"]]))
+
         btn_box.pack_start(btn_folder, False, False, 0)
         box.pack_start(btn_box, False, False, 0)
 
         dialog.show_all()
         dialog.run()
         dialog.destroy()
-
-    def _on_launch_app(self, app: dict) -> None:
-        """Launches application executable using desktop entry Exec command or DirectoryScanner."""
-        app_id = app.get("app_id")
-        opt_path = app.get("path")
-        exec_cmd = app.get("exec_cmd")
-
-        # 1. Check desktop file Exec command line
-        if not exec_cmd and app_id:
-            desktop_path = os.path.expanduser(f"~/.local/share/applications/{app_id}.desktop")
-            if os.path.isfile(desktop_path):
-                try:
-                    with open(desktop_path, "r", encoding="utf-8") as f:
-                        for line in f:
-                            if line.startswith("Exec="):
-                                exec_cmd = line.strip().split("=", 1)[1]
-                                break
-                except Exception:
-                    pass
-
-        if exec_cmd:
-            clean_cmd = (
-                exec_cmd.replace("%F", "")
-                .replace("%f", "")
-                .replace("%U", "")
-                .replace("%u", "")
-                .strip()
-            )
-            try:
-                subprocess.Popen(clean_cmd, shell=True)
-                logger.info(f"Launched application via Exec string: {clean_cmd}")
-                return
-            except Exception as e:
-                logger.error(f"Failed to launch app via Exec: {e}")
-
-        # 2. Fallback using DirectoryScanner with score heuristics
-        if opt_path and os.path.isdir(opt_path):
-            from applaunch.core.scanner import DirectoryScanner
-            display_name = app.get("display_name", "")
-            scanner = DirectoryScanner(root_dir=opt_path, app_search_slug=display_name)
-            candidates = scanner.find_entry_points()
-            if candidates:
-                cand_path = candidates[0].full_path
-                # Check for Electron --no-sandbox flag
-                app_dir = os.path.dirname(cand_path)
-                sandbox_path = os.path.join(app_dir, "chrome-sandbox")
-                cmd_run = f'"{cand_path}" --no-sandbox' if os.path.isfile(sandbox_path) else f'"{cand_path}"'
-                subprocess.Popen(cmd_run, shell=True)
-                logger.info(f"Launched scanned candidate binary: {cmd_run}")
-                return
 
     def _on_uninstall_app(self, app: dict) -> None:
         """Presents AppCleaner-style Deep Uninstaller GTK dialog with progress bar feedback."""

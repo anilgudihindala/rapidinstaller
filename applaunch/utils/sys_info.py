@@ -59,8 +59,54 @@ def is_binary_available(binary_name: str) -> bool:
     return shutil.which(binary_name) is not None
 
 
+def trust_desktop_file(filepath: str) -> bool:
+    """Sets executable permission (chmod 755) and GNOME GIO trusted metadata on a .desktop file."""
+    if not filepath or not os.path.isfile(filepath):
+        return False
+
+    try:
+        # Strictly set 755 (executable by user, NOT world-writable)
+        os.chmod(filepath, 0o755)
+    except Exception:
+        pass
+
+    if is_binary_available("gio"):
+        try:
+            # Set metadata::trusted to string 'true' (GNOME DING extension explicitly tests == 'true')
+            subprocess.run(["gio", "set", filepath, "metadata::trusted", "true"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+    try:
+        os.utime(filepath, None)
+    except Exception:
+        pass
+
+    # Signal DING process to reload desktop icon metadata
+    try:
+        subprocess.run(["pkill", "-f", "ding.js"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+    return True
+
+
+def trust_all_desktop_shortcuts() -> int:
+    """Scans ~/Desktop/ and trusts all .desktop files so GNOME launches them without untrusted dialogs."""
+    desktop_folder = os.path.expanduser("~/Desktop")
+    trusted_count = 0
+    if os.path.isdir(desktop_folder):
+        for fname in os.listdir(desktop_folder):
+            if fname.endswith(".desktop"):
+                fp = os.path.join(desktop_folder, fname)
+                if trust_desktop_file(fp):
+                    trusted_count += 1
+    return trusted_count
+
+
 def refresh_desktop_database() -> bool:
-    """Flushes Linux application menu caches via update-desktop-database."""
+    """Flushes Linux application menu caches via update-desktop-database and trusts desktop shortcuts."""
+    trust_all_desktop_shortcuts()
     apps_dir = os.path.expanduser("~/.local/share/applications")
     if is_binary_available("update-desktop-database"):
         ret = os.system(f"update-desktop-database '{apps_dir}' >/dev/null 2>&1")
@@ -143,15 +189,17 @@ def get_installed_apps() -> list:
         managed_ids = {a["app_id"] for a in apps}
         for u in unmanaged:
             if u["app_id"] not in managed_ids:
+                desktop_p = u.get("desktop_file")
+                dir_p = os.path.dirname(desktop_p) if (desktop_p and os.path.isfile(desktop_p)) else "/usr/share/applications"
                 apps.append({
                     "app_id": u["app_id"],
                     "display_name": u["display_name"],
-                    "path": u.get("desktop_file", "/usr/share/applications"),
+                    "path": dir_p,
                     "size_mb": 0,
                     "icon_path": u.get("icon"),
                     "exec_cmd": u.get("exec_cmd"),
                     "has_shortcut": True,
-                    "desktop_file": u.get("desktop_file"),
+                    "desktop_file": desktop_p,
                     "source": u.get("source", "System App"),
                 })
     except Exception:
@@ -329,6 +377,9 @@ def run_health_diagnostics_and_repair() -> dict:
     for app in apps:
         app_id = app["app_id"]
         opt_path = app["path"]
+
+        if app.get("source") != "Rapid Managed" or not os.path.isdir(opt_path):
+            continue
 
         # 1. Check CLI symlink in ~/.local/bin/
         cli_symlink = os.path.join(env["bin_dir"], app_id)

@@ -57,6 +57,8 @@ def clean_app_name(archive_path: str) -> Dict[str, str]:
             - 'search_slug': Lowercase token for executable matching (e.g. "myapp")
     """
     basename = os.path.basename(archive_path)
+    # Strip browser duplicate download counter suffixes like " (1)", " (2)", " [1]", "_copy"
+    basename = re.sub(r"[\s_\-]*[\(\[]\d+[\)\]]", "", basename)
 
     # 1. Remove all archive and package extensions
     name = re.sub(

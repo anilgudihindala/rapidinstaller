@@ -208,7 +208,9 @@ class DirectoryScanner:
                     if "extensions/" in rel_path or "node_modules/" in rel_path:
                         score -= 50
                     if fn_lower.endswith(".png") or fn_lower.endswith(".svg"):
-                        score += 15
+                        score += 35
+                    elif fn_lower.endswith(".ico") or fn_lower.endswith(".xpm"):
+                        score -= 15
 
                     icon_candidates.append((file_path, score))
 
