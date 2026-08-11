@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.rapidinstaller.RapidInstaller</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Rapid Installer</name>
+  <summary>Universal Package Installer &amp; GTK Application Manager for Linux</summary>
+  
+  <description>
+    <p>
+      Rapid Installer brings a macOS-style graphical desktop application manager and 
+      seamless package deployment experience to Ubuntu, Debian, and Linux platforms.
+    </p>
+    <p>
+      It automatically extracts and deploys .deb, .tar.gz, .zip, .AppImage, .rpm, and .7z software packages 
+      into user-space (~/.local/opt/) without requiring sudo or root permissions. Features include live progress 
+      spinners, smart binary heuristic entry-point scanning, FreeDesktop desktop shortcut creation, AppCleaner-style 
+      deep uninstallation, and developer toolchain management.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">org.rapidinstaller.RapidInstaller.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/assets/rapid_installer_dashboard.jpg</image>
+      <caption>Rapid Installer GTK Application Manager Dashboard</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/assets/rapid_installer_demo.gif</image>
+      <caption>Animated Feature Demonstration</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/anilgudihindala/RapidInstaller</url>
+  <url type="bugtracker">https://github.com/anilgudihindala/RapidInstaller/issues</url>
+  <url type="vcs-browser">https://github.com/anilgudihindala/RapidInstaller</url>
+
+  <developer_name>Anil Gudihindala</developer_name>
+
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+    <category>PackageManager</category>
+  </categories>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.0.0" date="2026-08-11">
+      <description>
+        <p>Initial release v1.0.0 featuring GTK3 App Manager, automated package extraction, and GNOME trusted shortcut integration.</p>
+      </description>
+    </release>
+  </releases>
+</component>
