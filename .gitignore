@@ -4,6 +4,6 @@ __pycache__/
 *$py.class
 .pytest_cache/
 *.log
-dist/
+build/
 *.tar.gz
 .DS_Store

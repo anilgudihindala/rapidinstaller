@@ -13,7 +13,8 @@
 
 ### 📥 Direct Download & Installation Options
 
-[![Download Rapid Installer ZIP](https://img.shields.io/badge/📥%20Download%20Rapid%20Installer%20ZIP-v1.0-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip)
+[![Download .deb Package](https://img.shields.io/badge/📦%20Download-.deb%20Installer-e11d48?style=for-the-badge&logo=debian&logoColor=white)](https://github.com/anilgudihindala/RapidInstaller/raw/main/dist/rapid-installer_1.0.0_all.deb)
+[![Download Rapid Installer ZIP](https://img.shields.io/badge/📥%20Download%20Installer%20ZIP-v1.0-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip)
 [![Download install.sh](https://img.shields.io/badge/📜%20Download%20install.sh%20Script-3b82f6?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/install.sh)
 [![GitHub Releases](https://img.shields.io/badge/📦%20GitHub-Latest%20Releases-8b5cf6?style=for-the-badge&logo=github&logoColor=white)](https://github.com/anilgudihindala/RapidInstaller/releases)
 
@@ -29,10 +30,9 @@ No more manual terminal extraction, `sudo` permissions, missing binary hunting, 
 
 ## 🚀 3 Ways to Get Rapid Installer
 
-### 📥 Option 1: Direct File Download (No Terminal Required!)
-1. Click **[Download RapidInstaller.zip](https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip)** or **[install.sh](https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/install.sh)**.
-2. Extract the downloaded ZIP and double-click `install.sh` (or right-click → **Run as a Program**).
-3. Done! Rapid Installer is installed on your Desktop and system Applications Menu.
+### 📥 Option 1: Direct .deb Package / File Download (No Terminal Required!)
+- **Ubuntu / Debian / Linux Mint:** Download **[rapid-installer_1.0.0_all.deb](https://github.com/anilgudihindala/RapidInstaller/raw/main/dist/rapid-installer_1.0.0_all.deb)** and double-click to install!
+- **Zip / Script Archive:** Click **[RapidInstaller.zip](https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip)** or **[install.sh](https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/install.sh)**, extract, and double-click `install.sh`.
 
 ### ⚡ Option 2: 1-Line Instant Terminal Command (Recommended)
 Paste this single command into your terminal:
