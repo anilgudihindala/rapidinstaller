@@ -1,0 +1,15 @@
+Source: rapid-installer
+Section: utils
+Priority: optional
+Maintainer: Anil Gudihindala <https://github.com/anilgudihindala/RapidInstaller>
+Build-Depends: debhelper-compat (= 13), python3-all
+Standards-Version: 4.6.2
+Homepage: https://github.com/anilgudihindala/RapidInstaller
+
+Package: rapid-installer
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-gi, gir1.2-gtk-3.0, python3-pil, zenity
+Description: Universal Package Installer & GTK Application Manager for Linux
+ Rapid Installer brings macOS-style desktop application deployment
+ and package management to Ubuntu, Debian, and Linux platforms.
+ Supports 1-click installation of .deb, .tar.gz, .zip, .AppImage, and .rpm.

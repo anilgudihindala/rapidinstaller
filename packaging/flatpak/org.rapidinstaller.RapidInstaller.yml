@@ -1,0 +1,26 @@
+app-id: org.rapidinstaller.RapidInstaller
+runtime: org.gnome.Platform
+runtime-version: '45'
+sdk: org.gnome.Sdk
+command: rapid-installer
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --share=ipc
+  - --filesystem=host
+  - --filesystem=home
+  - --device=all
+modules:
+  - name: rapid-installer
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin /app/share/rapid-installer /app/share/applications /app/share/icons
+      - cp -r applaunch main.py smart_installer.py /app/share/rapid-installer/
+      - chmod +x /app/share/rapid-installer/smart_installer.py
+      - ln -sf /app/share/rapid-installer/smart_installer.py /app/bin/rapid-installer
+      - cp desktop/rapid-installer.desktop /app/share/applications/org.rapidinstaller.RapidInstaller.desktop
+      - cp assets/rapid-installer.jpg /app/share/icons/org.rapidinstaller.RapidInstaller.jpg
+    sources:
+      - type: git
+        url: https://github.com/anilgudihindala/RapidInstaller.git
+        tag: v1.0.0

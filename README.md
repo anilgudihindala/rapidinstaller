@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Ubuntu%20%7C%20Debian%20%7C%20Linux-orange.svg)]()
 [![UI: GTK3](https://img.shields.io/badge/UI-GTK3%20Dark%20Mode-blue.svg)]()
+[![AUR: rapid-installer-git](https://img.shields.io/badge/AUR-rapid--installer--git-1793d1?style=flat&logo=arch-linux&logoColor=white)](packaging/aur/PKGBUILD)
+[![Flathub: org.rapidinstaller](https://img.shields.io/badge/Flathub-org.rapidinstaller-4a90e2?style=flat&logo=flathub&logoColor=white)](packaging/flatpak/org.rapidinstaller.RapidInstaller.yml)
 
 <br>
 
@@ -28,13 +30,12 @@ No more manual terminal extraction, `sudo` permissions, missing binary hunting, 
 
 ---
 
-## 🚀 3 Ways to Get Rapid Installer
+## 🚀 Ways to Get Rapid Installer
 
-### 📥 Option 1: Direct .deb Package / File Download (No Terminal Required!)
-- **Ubuntu / Debian / Linux Mint:** Download **[rapid-installer_1.0.0_all.deb](https://github.com/anilgudihindala/RapidInstaller/raw/main/dist/rapid-installer_1.0.0_all.deb)** and double-click to install!
-- **Zip / Script Archive:** Click **[RapidInstaller.zip](https://github.com/anilgudihindala/RapidInstaller/archive/refs/heads/main.zip)** or **[install.sh](https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main/install.sh)**, extract, and double-click `install.sh`.
+### 📥 1. Direct .deb Package Download (Ubuntu / Debian / Mint)
+Download **[rapid-installer_1.0.0_all.deb](https://github.com/anilgudihindala/RapidInstaller/raw/main/dist/rapid-installer_1.0.0_all.deb)** and double-click to install!
 
-### ⚡ Option 2: 1-Line Instant Terminal Command (Recommended)
+### ⚡ 2. 1-Line Instant Terminal Command (Recommended)
 Paste this single command into your terminal:
 
 ```bash
@@ -43,8 +44,24 @@ curl -fsSL https://raw.githubusercontent.com/anilgudihindala/RapidInstaller/main
 
 *(Rapid Installer installs in 3 seconds, sets up desktop shortcuts, and registers as your default package handler.)*
 
-### 📦 Option 3: GitHub Releases
-Download official release packages directly from the **[GitHub Releases Page](https://github.com/anilgudihindala/RapidInstaller/releases)**.
+### 🏔️ 3. Arch Linux (AUR Package)
+```bash
+yay -S rapid-installer-git
+# or
+paru -S rapid-installer-git
+```
+
+### ❄️ 4. Flathub (Flatpak)
+```bash
+flatpak install flathub org.rapidinstaller.RapidInstaller
+```
+
+### 🌀 5. Ubuntu PPA
+```bash
+sudo add-apt-repository ppa:anilgudihindala/rapid-installer
+sudo apt update
+sudo apt install rapid-installer
+```
 
 ---
 

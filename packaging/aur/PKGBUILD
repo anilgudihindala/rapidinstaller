@@ -1,0 +1,39 @@
+# Maintainer: Anil Gudihindala <https://github.com/anilgudihindala/RapidInstaller>
+pkgname=rapid-installer-git
+_pkgname=rapid-installer
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Universal Package Installer & GTK Application Manager for Linux"
+arch=('any')
+url="https://github.com/anilgudihindala/RapidInstaller"
+license=('MIT')
+depends=('python' 'gtk3' 'python-gobject' 'python-pillow' 'zenity')
+makedepends=('git')
+provides=('rapid-installer')
+conflicts=('rapid-installer')
+source=("git+https://github.com/anilgudihindala/RapidInstaller.git")
+sha256sums=('SKIP')
+
+package() {
+    cd "$srcdir/RapidInstaller"
+
+    # Install engine files
+    install -dm755 "$pkgdir/usr/share/rapid-installer"
+    cp -r applaunch main.py smart_installer.py "$pkgdir/usr/share/rapid-installer/"
+    chmod +x "$pkgdir/usr/share/rapid-installer/smart_installer.py"
+    chmod +x "$pkgdir/usr/share/rapid-installer/main.py"
+
+    # Create binary symlinks
+    install -dm755 "$pkgdir/usr/bin"
+    ln -sf /usr/share/rapid-installer/smart_installer.py "$pkgdir/usr/bin/rapid-installer"
+    ln -sf /usr/share/rapid-installer/smart_installer.py "$pkgdir/usr/bin/rapidinstaller"
+
+    # Install desktop launcher entry
+    install -Dm644 desktop/rapid-installer.desktop "$pkgdir/usr/share/applications/rapid-installer.desktop"
+    
+    # Install icon asset
+    install -Dm644 assets/rapid-installer.jpg "$pkgdir/usr/share/icons/rapid-installer.jpg"
+
+    # Install license
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
