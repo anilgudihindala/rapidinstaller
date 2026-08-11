@@ -1,8 +1,9 @@
-rapid-installer (1.0.0-1ppa3) noble; urgency=medium
+rapid-installer (1.0.0-1ppa4) noble; urgency=medium
 
   * Fix dpkg-gencontrol target directory path and undefined variables in control.
+  * Clean virtual environment files before building source package.
 
- -- Anil Gudihindala <anilgudihindala@github.com>  Tue, 11 Aug 2026 22:43:00 +0530
+ -- Anil Gudihindala <anilgudihindala@github.com>  Tue, 11 Aug 2026 22:46:00 +0530
 
 rapid-installer (1.0.0-1ppa2) noble; urgency=medium
 
