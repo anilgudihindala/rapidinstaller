@@ -1,3 +1,9 @@
+rapid-installer (1.0.0-1ppa3) noble; urgency=medium
+
+  * Fix dpkg-gencontrol target directory path and undefined variables in control.
+
+ -- Anil Gudihindala <anilgudihindala@github.com>  Tue, 11 Aug 2026 22:43:00 +0530
+
 rapid-installer (1.0.0-1ppa2) noble; urgency=medium
 
   * Fix binary target in debian/rules for Launchpad PPA automated build farm.

@@ -26,5 +26,5 @@ binary:
 	echo 'exec python3 /usr/share/rapid-installer/main.py "$@"' >> debian/rapid-installer/usr/bin/rapid-installer
 	chmod 755 debian/rapid-installer/usr/bin/rapid-installer
 
-	dpkg-gencontrol -prapid-installer
+	dpkg-gencontrol -prapid-installer -Pdebian/rapid-installer
 	dpkg-deb --build debian/rapid-installer ..
