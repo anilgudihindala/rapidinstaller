@@ -48,6 +48,13 @@ parts:
   rapid-installer:
     plugin: dump
     source: .
+    stage:
+      - applaunch
+      - assets
+      - desktop
+      - main.py
+      - smart_installer.py
+      - LICENSE
     stage-packages:
       - python3-gi
       - gir1.2-gtk-3.0
