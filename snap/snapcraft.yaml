@@ -19,6 +19,7 @@ description: |
   Key Search Terms: installer, deb installer, appimage runner, package manager, software center, app uninstaller, appcleaner, nvm, bun, rustup, pyenv, go toolchain, double click install, linux app store.
 
 license: MIT
+icon: meta/gui/rapid-installer.png
 contact: anilgudihindala@github.com
 issues: https://github.com/anilgudihindala/RapidInstaller/issues
 source-code: https://github.com/anilgudihindala/RapidInstaller
@@ -51,6 +52,7 @@ parts:
     stage:
       - bin
       - usr
+      - meta
     stage-packages:
       - python3-gi
       - gir1.2-gtk-3.0
@@ -62,13 +64,11 @@ parts:
       mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
       mkdir -p $CRAFT_PART_INSTALL/usr/share/rapid-installer
       mkdir -p $CRAFT_PART_INSTALL/usr/share/pixmaps
-      mkdir -p $CRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps
-      mkdir -p $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps
+      mkdir -p $CRAFT_PART_INSTALL/meta/gui
       cp -r applaunch main.py smart_installer.py $CRAFT_PART_INSTALL/usr/share/rapid-installer/
       cp desktop/rapid-installer.desktop $CRAFT_PART_INSTALL/usr/share/applications/
       cp assets/rapid-installer.png $CRAFT_PART_INSTALL/usr/share/pixmaps/rapid-installer.png
-      cp assets/rapid-installer.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps/rapid-installer.png
-      cp assets/rapid-installer.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/rapid-installer.png
+      cp assets/rapid-installer.png $CRAFT_PART_INSTALL/meta/gui/rapid-installer.png
       printf '#!/bin/sh\nexec python3 $SNAP/usr/share/rapid-installer/main.py "$@"\n' > $CRAFT_PART_INSTALL/bin/launcher.sh
       chmod +x $CRAFT_PART_INSTALL/bin/launcher.sh
       chmod +x $CRAFT_PART_INSTALL/usr/share/rapid-installer/main.py
