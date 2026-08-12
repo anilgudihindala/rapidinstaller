@@ -343,6 +343,36 @@ class AppLaunchManagerWindow(Gtk.Window):
         # If launched with archive file, run installer dialog
         if initial_archive and os.path.isfile(initial_archive):
             GLib.idle_add(self._trigger_installation_flow, initial_archive)
+        
+        # Check if default installer on startup
+        GLib.idle_add(self._check_default_installer_on_startup)
+
+    def _check_default_installer_on_startup(self) -> bool:
+        from applaunch.utils.sys_info import is_default_installer, set_as_default_installer, load_config, save_config
+        config = load_config()
+        if config.get("has_prompted_default_installer") or is_default_installer():
+            return False
+            
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text="Make Rapid Installer Default?",
+        )
+        dialog.format_secondary_text(
+            "Would you like to set Rapid Installer as the default application for opening .deb, .tar.gz, .AppImage, and other archive packages?"
+        )
+        response = dialog.run()
+        dialog.destroy()
+        
+        if response == Gtk.ResponseType.YES:
+            if set_as_default_installer():
+                self.show_toast("Rapid Installer set as default package handler.")
+        
+        config["has_prompted_default_installer"] = True
+        save_config(config)
+        return False
 
     def _on_drag_data_received(self, widget, context, x, y, data, info, time) -> None:
         """Handles drag-and-drop of package archives onto window."""
@@ -981,6 +1011,12 @@ class AppLaunchManagerWindow(Gtk.Window):
         )
         lbl_desc.get_style_context().add_class("empty-desc")
 
+        lbl_info = Gtk.Label(
+            label="\n(Note: You are running the strictly confined Snap version.\nTo discover and manage external system apps, download the native .deb version from GitHub)"
+        )
+        lbl_info.set_justify(Gtk.Justification.CENTER)
+        lbl_info.get_style_context().add_class("empty-desc")
+
         btn_install = Gtk.Button(label="Install Application Package")
         btn_install.get_style_context().add_class("btn-primary")
         btn_install.set_halign(Gtk.Align.CENTER)
@@ -989,7 +1025,8 @@ class AppLaunchManagerWindow(Gtk.Window):
         empty_box.pack_start(img_empty, False, False, 0)
         empty_box.pack_start(lbl_title, False, False, 0)
         empty_box.pack_start(lbl_desc, False, False, 0)
-        empty_box.pack_start(btn_install, False, False, 6)
+        empty_box.pack_start(lbl_info, False, False, 0)
+        empty_box.pack_start(btn_install, False, False, 16)
 
         self.apps_vbox.pack_start(empty_box, True, True, 0)
         self.apps_vbox.show_all()
