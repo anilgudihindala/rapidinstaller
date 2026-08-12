@@ -2,11 +2,21 @@ name: rapid-installer
 base: core24
 version: '1.0.0'
 title: Rapid Installer
-summary: Universal Package Installer & GTK Application Manager for Linux
+summary: Universal Package Installer, AppCleaner & Developer Toolchain Manager
 description: |
-  Rapid Installer brings a macOS-style graphical desktop application manager and seamless package deployment experience to Ubuntu, Debian, and Linux platforms.
-  Supports 1-click installation, dependency checks, and GUI desktop management for .deb, .tar.gz, .zip, .AppImage, and .rpm package archives.
-  Search keywords: installer, deb installer, appimage, package manager, software center, tar.gz, zip installer.
+  Rapid Installer is the ultimate macOS-style graphical desktop application manager and package installer for Linux.
+  
+  FOR BEGINNERS & ROOKIES:
+  • 1-click double-click installation for .deb, .tar.gz, .zip, .AppImage, .rpm, .7z, and .tar.xz packages.
+  • No terminal commands or complex sudo permissions needed—double click any app archive to install visually.
+  • Sleek GTK3 App Dashboard to launch installed applications and clean up unused apps.
+
+  FOR POWER USERS & DEVELOPERS:
+  • AppCleaner-style deep uninstallation & disk space usage analytics.
+  • Built-in Developer Runtime Manager: 1-click environment setup for Node.js (nvm), Bun, Rust (rustup), Python (pyenv), and Go (golang).
+  • Zero-sudo user-space isolation (~/.local/opt/) & smart binary heuristic entry point ranking.
+
+  Key Search Terms: installer, deb installer, appimage runner, package manager, software center, app uninstaller, appcleaner, nvm, bun, rustup, pyenv, go toolchain, double click install, linux app store.
 
 grade: stable
 confinement: strict
