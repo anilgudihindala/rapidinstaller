@@ -61,8 +61,14 @@ parts:
       mkdir -p $CRAFT_PART_INSTALL/bin
       mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
       mkdir -p $CRAFT_PART_INSTALL/usr/share/rapid-installer
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/pixmaps
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps
       cp -r applaunch main.py smart_installer.py $CRAFT_PART_INSTALL/usr/share/rapid-installer/
       cp desktop/rapid-installer.desktop $CRAFT_PART_INSTALL/usr/share/applications/
+      cp assets/rapid-installer.jpg $CRAFT_PART_INSTALL/usr/share/pixmaps/rapid-installer.jpg
+      cp assets/rapid-installer.jpg $CRAFT_PART_INSTALL/usr/share/pixmaps/rapid-installer
+      cp assets/rapid-installer.jpg $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/rapid-installer.jpg
+      cp assets/rapid-installer.jpg $CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/rapid-installer
       printf '#!/bin/sh\nexec python3 $SNAP/usr/share/rapid-installer/main.py "$@"\n' > $CRAFT_PART_INSTALL/bin/launcher.sh
       chmod +x $CRAFT_PART_INSTALL/bin/launcher.sh
       chmod +x $CRAFT_PART_INSTALL/usr/share/rapid-installer/main.py
