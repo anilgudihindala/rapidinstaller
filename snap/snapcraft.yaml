@@ -1,0 +1,48 @@
+name: rapid-installer
+base: core24
+version: '1.0.0'
+summary: Universal Package Installer & GTK Application Manager for Linux
+description: |
+  Rapid Installer brings macOS-style desktop application deployment
+  and package management to Ubuntu, Debian, and Linux platforms.
+  Supports 1-click installation of .deb, .tar.gz, .zip, .AppImage, and .rpm.
+
+grade: stable
+confinement: strict
+
+apps:
+  rapid-installer:
+    command: usr/bin/rapid-installer
+    desktop: usr/share/applications/rapid-installer.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+
+parts:
+  rapid-installer:
+    plugin: dump
+    source: .
+    stage-packages:
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - python3-pil
+      - zenity
+    override-build: |
+      craftctl default
+      chmod +x $CRAFT_PART_INSTALL/main.py
+      chmod +x $CRAFT_PART_INSTALL/smart_installer.py
+      mkdir -p $CRAFT_PART_INSTALL/usr/bin
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/rapid-installer
+      cp -r applaunch main.py smart_installer.py $CRAFT_PART_INSTALL/usr/share/rapid-installer/
+      cp desktop/rapid-installer.desktop $CRAFT_PART_INSTALL/usr/share/applications/
+      cat << 'EOF' > $CRAFT_PART_INSTALL/usr/bin/rapid-installer
+#!/bin/sh
+exec python3 /usr/share/rapid-installer/main.py "$@"
+EOF
+      chmod +x $CRAFT_PART_INSTALL/usr/bin/rapid-installer
