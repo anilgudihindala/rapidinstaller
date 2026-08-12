@@ -9,7 +9,7 @@ import argparse
 import os
 import shutil
 import sys
-from typing import List
+from typing import List, Optional
 
 from applaunch import __version__
 from applaunch.core.installer import AppInstallerEngine
