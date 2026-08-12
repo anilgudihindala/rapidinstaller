@@ -18,8 +18,18 @@ description: |
 
   Key Search Terms: installer, deb installer, appimage runner, package manager, software center, app uninstaller, appcleaner, nvm, bun, rustup, pyenv, go toolchain, double click install, linux app store.
 
+license: MIT
+contact: anilgudihindala@github.com
+issues: https://github.com/anilgudihindala/RapidInstaller/issues
+source-code: https://github.com/anilgudihindala/RapidInstaller
+website: https://github.com/anilgudihindala/RapidInstaller
+
 grade: stable
 confinement: strict
+
+lint:
+  ignore:
+    - library
 
 apps:
   rapid-installer:
