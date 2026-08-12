@@ -1,11 +1,12 @@
 name: rapid-installer
 base: core24
 version: '1.0.0'
+title: Rapid Installer
 summary: Universal Package Installer & GTK Application Manager for Linux
 description: |
-  Rapid Installer brings macOS-style desktop application deployment
-  and package management to Ubuntu, Debian, and Linux platforms.
-  Supports 1-click installation of .deb, .tar.gz, .zip, .AppImage, and .rpm.
+  Rapid Installer brings a macOS-style graphical desktop application manager and seamless package deployment experience to Ubuntu, Debian, and Linux platforms.
+  Supports 1-click installation, dependency checks, and GUI desktop management for .deb, .tar.gz, .zip, .AppImage, and .rpm package archives.
+  Search keywords: installer, deb installer, appimage, package manager, software center, tar.gz, zip installer.
 
 grade: stable
 confinement: strict
